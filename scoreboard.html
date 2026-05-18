@@ -181,7 +181,7 @@
   #nameA, #nameB { color: rgba(255,255,255,0.9); }
 
   .score-num {
-    font-size: clamp(150px, 62vh, 420px);
+    font-size: clamp(130px, 50vh, 360px);
     font-weight: 900;
     line-height: 1;
     font-variant-numeric: tabular-nums;
@@ -189,8 +189,9 @@
     transition: transform 0.08s, text-shadow 0.3s;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
+    transform: scaleX(1.35);
   }
-  .score-num:active { transform: scale(0.93); }
+  .score-num:active { transform: scaleX(1.35) scale(0.93); }
   #scoreA, #scoreB { color: #ffffff; text-shadow: 0 4px 24px rgba(0,0,0,0.25); }
   .score-num.win-flash { animation: winFlash 0.6s ease; }
   @keyframes winFlash {
