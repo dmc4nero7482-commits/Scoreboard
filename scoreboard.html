@@ -630,6 +630,69 @@
   #net-conn-count.has-conn { color: #4caf50; }
   #net-status-msg { font-size: 13px; color: var(--muted); margin-bottom: 12px; min-height: 20px; }
 
+  /* ── Tutorial overlay ── */
+  #tutorial-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.88);
+    z-index: 500;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  #tutorial-overlay.show { display: flex; }
+  .tut-panels {
+    display: flex;
+    width: 100%;
+    flex: 1;
+  }
+  .tut-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    padding: 16px 24px;
+    color: white;
+  }
+  .tut-sep {
+    width: 1px;
+    background: rgba(255,255,255,0.18);
+    margin: 24px 0;
+  }
+  .tut-team-name {
+    font-size: clamp(15px, 2.8vw, 22px);
+    font-weight: 700;
+    color: rgba(255,255,255,0.4);
+    letter-spacing: 1px;
+    margin: 0;
+  }
+  .tut-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: clamp(13px, 2vw, 17px);
+    color: rgba(255,255,255,0.9);
+  }
+  .tut-item svg { flex-shrink: 0; opacity: 0.85; }
+  .tut-item b { color: #fff; }
+  #tut-ok {
+    margin: 12px 0 20px;
+    padding: 12px 48px;
+    background: #fff;
+    color: #111;
+    border: none;
+    border-radius: 30px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    transition: transform 0.1s;
+  }
+  #tut-ok:active { transform: scale(0.94); }
+
   /* ── Win banner ── */
   #win-banner {
     display: none;
@@ -672,9 +735,7 @@
   <div id="score-area">
     <!-- Team A -->
     <div class="score-panel serving" id="panelA">
-      <div class="swipe-hint top">↑</div>
       <div class="swipe-flash" id="flashA" style="background:var(--a-color)"></div>
-      <div class="set-dots" id="dotsA"></div>
       <div class="score-num" id="scoreA" onclick="addScore('A')">0</div>
       <button class="btn-deduct" onclick="addScore('A', -1)">−1</button>
     </div>
@@ -690,9 +751,7 @@
 
     <!-- Team B -->
     <div class="score-panel" id="panelB">
-      <div class="swipe-hint top">↑</div>
       <div class="swipe-flash" id="flashB" style="background:var(--b-color)"></div>
-      <div class="set-dots" id="dotsB"></div>
       <div class="score-num" id="scoreB" onclick="addScore('B')">0</div>
       <button class="btn-deduct" onclick="addScore('B', -1)">−1</button>
     </div>
@@ -706,6 +765,60 @@
       退出全螢幕
     </div>
   </div>
+</div>
+
+<!-- Tutorial overlay (first-time users) -->
+<div id="tutorial-overlay">
+  <div class="tut-panels">
+    <div class="tut-panel">
+      <p class="tut-team-name">隊伍 A</p>
+      <div class="tut-item">
+        <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 12V7a2 2 0 0 1 4 0v5"/><path d="M13 10V8a2 2 0 0 1 4 0v4"/><path d="M17 12a2 2 0 0 1 4 0v2a6 6 0 0 1-6 6h-2a6 6 0 0 1-6-6 2 2 0 0 1 4 0"/>
+        </svg>
+        <span><b>點擊</b> 或 <b>向上滑</b><br>加分 +1</span>
+      </div>
+      <div class="tut-item">
+        <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="3" x2="12" y2="19"/><polyline points="18,13 12,19 6,13"/>
+          <path d="M8 22 Q12 20 16 22" stroke-width="1.4" fill="none"/>
+        </svg>
+        <span><b>向下滑</b><br>減分 −1</span>
+      </div>
+      <div class="tut-item">
+        <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round">
+          <rect x="5" y="8" width="14" height="8" rx="4"/><text x="12" y="15" text-anchor="middle" fill="white" font-size="7" font-weight="bold" stroke="none">−1</text>
+        </svg>
+        <span>按 <b>底部 −1</b><br>快速扣分</span>
+      </div>
+    </div>
+
+    <div class="tut-sep"></div>
+
+    <div class="tut-panel">
+      <p class="tut-team-name">隊伍 B</p>
+      <div class="tut-item">
+        <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 12V7a2 2 0 0 1 4 0v5"/><path d="M13 10V8a2 2 0 0 1 4 0v4"/><path d="M17 12a2 2 0 0 1 4 0v2a6 6 0 0 1-6 6h-2a6 6 0 0 1-6-6 2 2 0 0 1 4 0"/>
+        </svg>
+        <span><b>點擊</b> 或 <b>向上滑</b><br>加分 +1</span>
+      </div>
+      <div class="tut-item">
+        <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="3" x2="12" y2="19"/><polyline points="18,13 12,19 6,13"/>
+          <path d="M8 22 Q12 20 16 22" stroke-width="1.4" fill="none"/>
+        </svg>
+        <span><b>向下滑</b><br>減分 −1</span>
+      </div>
+      <div class="tut-item">
+        <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round">
+          <rect x="5" y="8" width="14" height="8" rx="4"/><text x="12" y="15" text-anchor="middle" fill="white" font-size="7" font-weight="bold" stroke="none">−1</text>
+        </svg>
+        <span>按 <b>底部 −1</b><br>快速扣分</span>
+      </div>
+    </div>
+  </div>
+  <button id="tut-ok" onclick="dismissTutorial()">我知道了！</button>
 </div>
 
 <!-- Remote control UI (shown on second device) -->
@@ -1237,13 +1350,6 @@ function render() {
   document.getElementById('panelA').classList.toggle('serving', state.serving === 'A');
   document.getElementById('panelB').classList.toggle('serving', state.serving === 'B');
 
-  const toWin = state.settings.setsToWin;
-  ['A', 'B'].forEach(side => {
-    const dots = document.getElementById('dots' + side);
-    dots.innerHTML = Array.from({length: toWin}, (_, i) =>
-      `<div class="dot ${i < state['sets' + side] ? 'won-' + side.toLowerCase() : ''}"></div>`
-    ).join('');
-  });
 }
 
 // ── Modal helpers ──
@@ -1719,6 +1825,17 @@ document.getElementById('setsToWin').addEventListener('keydown', e => {
   if (e.key === 'Enter') saveSettings();
 });
 
+// ── Tutorial ──
+function checkTutorial() {
+  if (!localStorage.getItem('tut-done')) {
+    document.getElementById('tutorial-overlay').classList.add('show');
+  }
+}
+function dismissTutorial() {
+  document.getElementById('tutorial-overlay').classList.remove('show');
+  localStorage.setItem('tut-done', '1');
+}
+
 function openMoreMenu() { openModal('moreModal'); }
 
 function renderBtTopbar() {
@@ -1763,6 +1880,7 @@ if (_remoteCode) {
   renderTimer();
   renderBtStatus();
   initSwipeGestures();
+  checkTutorial();
 }
 </script>
 </body>
