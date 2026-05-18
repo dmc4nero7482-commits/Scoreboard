@@ -1,4 +1,4 @@
-const CACHE = 'scoreboard-v1';
+const CACHE = 'scoreboard-v2';
 const STATIC = ['./manifest.json', './icon.svg'];
 
 self.addEventListener('install', e => {
