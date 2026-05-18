@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1565c0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>羽球計分板</title>
+<link rel="manifest" href="manifest.json">
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --a-color: #e53935;
+    --b-color: #1e88e5;
+    --bg: #0d1b2a;
+    --panel-bg: #112240;
+    --text: #e0e6f0;
+    --muted: #8899aa;
+    --border: #1e3a5f;
+    --win-glow: #ffd600;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    overflow: hidden;
+  }
+
+  /* ── Main layout ── */
+  #app {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    grid-template-rows: 1fr auto;
+    height: 100dvh;
+    gap: 0;
+  }
+
+  /* ── Score panels ── */
+  .score-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 16px 8px;
+    position: relative;
+    transition: background 0.3s;
+  }
+  .score-panel.serving::after {
+    content: '🏸';
+    position: absolute;
+    top: 10px;
+    font-size: 22px;
+    opacity: 0.9;
+  }
+  #panelA { background: color-mix(in srgb, var(--a-color) 12%, var(--bg)); border-right: 2px solid var(--border); }
+  #panelB { background: color-mix(in srgb, var(--b-color) 12%, var(--bg)); border-left: 2px solid var(--border); }
+
+  .team-name {
+    font-size: clamp(16px, 3vw, 28px);
+    font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: border-color 0.2s;
+    text-align: center;
+    min-width: 80px;
+  }
+  .team-name:hover { border-color: var(--muted); }
+  #nameA { color: var(--a-color); }
+  #nameB { color: var(--b-color); }
+
+  .score-num {
+    font-size: clamp(80px, 18vw, 200px);
+    font-weight: 900;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    transition: transform 0.08s, text-shadow 0.3s;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .score-num:active { transform: scale(0.93); }
+  #scoreA { color: var(--a-color); text-shadow: 0 0 40px color-mix(in srgb, var(--a-color) 30%, transparent); }
+  #scoreB { color: var(--b-color); text-shadow: 0 0 40px color-mix(in srgb, var(--b-color) 30%, transparent); }
+  .score-num.win-flash { animation: winFlash 0.6s ease; }
+  @keyframes winFlash {
+    0%, 100% { text-shadow: none; }
+    50% { text-shadow: 0 0 60px var(--win-glow), 0 0 100px var(--win-glow); color: var(--win-glow); }
+  }
+
+  .score-controls {
+    display: flex;
+    gap: 8px;
+  }
+  .btn-score {
+    width: clamp(44px, 8vw, 80px);
+    height: clamp(44px, 7vw, 68px);
+    border: none;
+    border-radius: 12px;
+    font-size: clamp(20px, 4vw, 36px);
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.1s, opacity 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-score:active { transform: scale(0.9); }
+  .btn-plus-a  { background: var(--a-color); color: #fff; }
+  .btn-minus-a { background: #333; color: var(--a-color); border: 2px solid var(--a-color); }
+  .btn-plus-b  { background: var(--b-color); color: #fff; }
+  .btn-minus-b { background: #333; color: var(--b-color); border: 2px solid var(--b-color); }
+
+  .set-dots {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .dot {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--border);
+  }
+  .dot.won-a { background: var(--a-color); }
+  .dot.won-b { background: var(--b-color); }
+
+  /* ── Swipe hints ── */
+  .swipe-hint {
+    position: absolute;
+    left: 50%; transform: translateX(-50%);
+    font-size: 18px;
+    opacity: 0.18;
+    pointer-events: none;
+    user-select: none;
+  }
+  .swipe-hint.top { top: 38px; }
+  .swipe-hint.bot { bottom: 14px; }
+
+  .swipe-flash {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    border-radius: 0;
+    opacity: 0;
+  }
+  .swipe-flash.up   { animation: flashUp 0.25s ease; }
+  .swipe-flash.down { animation: flashDown 0.25s ease; }
+  @keyframes flashUp   { 0%{opacity:0.28} 100%{opacity:0} }
+  @keyframes flashDown { 0%{opacity:0.18} 100%{opacity:0} }
+
+  /* ── Center panel ── */
+  #center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 6px;
+    min-width: 120px;
+    max-width: 180px;
+    background: var(--panel-bg);
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    gap: 6px;
+  }
+
+  #timer-display {
+    font-size: clamp(13px, 2vw, 20px);
+    font-variant-numeric: tabular-nums;
+    color: var(--muted);
+    cursor: pointer;
+    letter-spacing: 1px;
+    user-select: none;
+  }
+  #timer-display.running { color: #4caf50; }
+
+  #set-score {
+    font-size: clamp(22px, 4vw, 42px);
+    font-weight: 900;
+    letter-spacing: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  #set-score span:first-child { color: var(--a-color); }
+  #set-score span:last-child  { color: var(--b-color); }
+  #set-score .sep { color: var(--muted); }
+
+  #set-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .center-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+  }
+  .btn-ctrl {
+    width: 100%;
+    padding: 8px 4px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #1a2f4a;
+    color: var(--text);
+    font-size: clamp(11px, 1.5vw, 14px);
+    cursor: pointer;
+    transition: background 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-ctrl:hover { background: #243b5e; }
+  .btn-ctrl.danger { border-color: #c62828; color: #ef9a9a; }
+  .btn-ctrl.danger:hover { background: #3b1010; }
+  .btn-ctrl.primary { border-color: var(--b-color); color: #90caf9; }
+  .btn-ctrl.primary:hover { background: #0d2a44; }
+  .btn-ctrl.bt-on { border-color: #4caf50; color: #81c784; }
+
+  /* ── Bluetooth ── */
+  #bt-dot {
+    display: inline-block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--border);
+    margin-right: 4px;
+    vertical-align: middle;
+    transition: background 0.3s;
+  }
+  #bt-dot.connected { background: #4caf50; }
+  #bt-dot.learning  { background: #ff9800; animation: btBlink 0.4s infinite; }
+  @keyframes btBlink { 0%,100%{opacity:1} 50%{opacity:0.15} }
+
+  .bt-map-table { width: 100%; font-size: 13px; margin: 10px 0; border-collapse: collapse; }
+  .bt-map-table td { padding: 7px 6px; vertical-align: middle; border-bottom: 1px solid var(--border); }
+  .bt-map-table td:first-child { width: 80px; }
+  .bt-map-table td:nth-child(2) {
+    font-family: 'Courier New', monospace; font-size: 11px;
+    color: var(--muted); max-width: 90px; overflow: hidden; text-overflow: ellipsis;
+  }
+  .btn-learn {
+    padding: 5px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: #1a2f4a;
+    color: var(--text);
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .btn-learn.active { border-color: #ff9800; color: #ff9800; }
+  .btn-learn.mapped { border-color: #4caf50; color: #81c784; }
+
+  #bt-info { font-size: 12px; color: var(--muted); margin-bottom: 12px; line-height: 1.6; }
+  #bt-learn-hint {
+    font-size: 13px; color: #ff9800;
+    text-align: center; padding: 8px;
+    border: 1px dashed #ff9800; border-radius: 8px;
+    margin-bottom: 10px; display: none;
+  }
+
+  /* ── Bottom history bar ── */
+  #history-bar {
+    grid-column: 1 / -1;
+    background: #0a1520;
+    border-top: 1px solid var(--border);
+    padding: 6px 12px;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    align-items: center;
+    min-height: 40px;
+    scrollbar-width: none;
+  }
+  #history-bar::-webkit-scrollbar { display: none; }
+  .hist-item {
+    flex-shrink: 0;
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-variant-numeric: tabular-nums;
+  }
+  .hist-item.a { background: color-mix(in srgb, var(--a-color) 20%, transparent); color: var(--a-color); }
+  .hist-item.b { background: color-mix(in srgb, var(--b-color) 20%, transparent); color: var(--b-color); }
+  .hist-item.set-end { background: #ffd60022; color: var(--win-glow); font-weight: 700; }
+  #hist-label { color: var(--muted); font-size: 11px; flex-shrink: 0; }
+
+  /* ── Modals ── */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: #000000bb;
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--panel-bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    min-width: 280px;
+    max-width: 420px;
+    width: 90%;
+  }
+  .modal h3 { margin-bottom: 16px; font-size: 18px; }
+  .modal label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  .modal input[type=text], .modal input[type=number], .modal select {
+    width: 100%;
+    padding: 10px 12px;
+    background: #0d1b2a;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 16px;
+    margin-bottom: 14px;
+  }
+  .modal-row { display: flex; gap: 10px; margin-top: 4px; }
+  .modal-row button {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-cancel { background: #1e3a5f; color: var(--text); }
+  .btn-confirm { background: #1e88e5; color: #fff; }
+  .btn-danger-confirm { background: #c62828; color: #fff; }
+
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .toggle-row span { font-size: 14px; }
+  .toggle {
+    width: 44px; height: 24px;
+    background: var(--border);
+    border-radius: 12px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s;
+    border: none;
+    flex-shrink: 0;
+  }
+  .toggle.on { background: #1e88e5; }
+  .toggle::after {
+    content: '';
+    position: absolute;
+    width: 18px; height: 18px;
+    background: #fff;
+    border-radius: 50%;
+    top: 3px; left: 3px;
+    transition: left 0.2s;
+  }
+  .toggle.on::after { left: 23px; }
+
+  /* ── Set summary ── */
+  #summary-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+  #summary-table th, #summary-table td { padding: 6px 10px; text-align: center; border: 1px solid var(--border); }
+  #summary-table th { background: #0d1b2a; color: var(--muted); }
+
+  /* ── Network Remote UI ── */
+  #remote-ui {
+    display: none;
+    position: fixed; inset: 0;
+    background: var(--bg);
+    z-index: 300;
+    flex-direction: column;
+  }
+  #remote-ui.active { display: flex; }
+
+  #remote-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: var(--panel-bg);
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  #remote-status-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #ff9800;
+    margin-right: 6px;
+    animation: btBlink 0.8s infinite;
+  }
+  #remote-status-dot.ok { background: #4caf50; animation: none; }
+  #remote-status-dot.err { background: #e53935; animation: none; }
+  #remote-code-badge {
+    font-size: 20px; font-weight: 900;
+    letter-spacing: 4px;
+    color: var(--text);
+  }
+
+  #remote-body {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 80px 1fr;
+  }
+  .rem-score-btn {
+    border: none;
+    font-size: clamp(60px, 20vw, 120px);
+    font-weight: 900;
+    cursor: pointer;
+    transition: filter 0.1s;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  .rem-score-btn:active { filter: brightness(1.4); }
+  #rem-a { background: color-mix(in srgb, var(--a-color) 20%, var(--bg)); color: var(--a-color); }
+  #rem-b { background: color-mix(in srgb, var(--b-color) 20%, var(--bg)); color: var(--b-color); }
+
+  #rem-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: var(--panel-bg);
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+  }
+  .rem-ctrl-btn {
+    width: 56px; height: 56px;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    background: #1a2f4a;
+    color: var(--text);
+    font-size: 22px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .rem-ctrl-btn:active { background: #243b5e; }
+
+  #remote-hint {
+    text-align: center;
+    padding: 14px;
+    font-size: 13px;
+    color: var(--muted);
+    background: var(--panel-bg);
+    border-top: 1px solid var(--border);
+  }
+
+  /* ── Network modal ── */
+  #net-qr { text-align: center; margin: 12px 0; }
+  #net-qr img { border-radius: 8px; }
+  #net-room-display {
+    text-align: center;
+    font-size: 32px;
+    font-weight: 900;
+    letter-spacing: 8px;
+    color: var(--text);
+    margin: 8px 0 4px;
+  }
+  #net-conn-count {
+    text-align: center;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  #net-conn-count.has-conn { color: #4caf50; }
+  #net-status-msg { font-size: 13px; color: var(--muted); margin-bottom: 12px; min-height: 20px; }
+
+  /* ── Win banner ── */
+  #win-banner {
+    display: none;
+    position: fixed; inset: 0;
+    background: #000000cc;
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 20px;
+    text-align: center;
+  }
+  #win-banner.open { display: flex; }
+  #win-banner h1 { font-size: clamp(32px, 8vw, 72px); }
+  #win-banner p  { font-size: clamp(16px, 3vw, 28px); color: var(--muted); }
+  #win-banner .btn-new { padding: 16px 40px; border: none; border-radius: 14px; background: #1e88e5; color: #fff; font-size: 18px; font-weight: 700; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- Team A -->
+  <div class="score-panel serving" id="panelA">
+    <div class="swipe-hint top">↑ +1</div>
+    <div class="swipe-flash" id="flashA" style="background:var(--a-color)"></div>
+    <div class="team-name" id="nameA" onclick="editName('A')">隊伍 A</div>
+    <div class="set-dots" id="dotsA"></div>
+    <div class="score-num" id="scoreA" onclick="addScore('A')">0</div>
+    <div class="score-controls">
+      <button class="btn-score btn-minus-a" onclick="addScore('A',-1)">−</button>
+      <button class="btn-score btn-plus-a"  onclick="addScore('A',+1)">+</button>
+    </div>
+    <div class="swipe-hint bot">↓ −1</div>
+  </div>
+
+  <!-- Center -->
+  <div id="center">
+    <div id="timer-display" onclick="toggleTimer()">00:00</div>
+    <div id="set-label">第 1 局</div>
+    <div id="set-score"><span id="setsA">0</span><span class="sep"> : </span><span id="setsB">0</span></div>
+    <div class="center-btns">
+      <button class="btn-ctrl primary" onclick="openSettings()">⚙ 設定</button>
+      <button class="btn-ctrl" id="btBtn" onclick="openBtModal()"><span id="bt-dot"></span>藍牙遙控</button>
+      <button class="btn-ctrl" id="netBtn" onclick="openNetModal()">📡 網路遙控</button>
+      <button class="btn-ctrl" onclick="nextSet()">下一局</button>
+      <button class="btn-ctrl" onclick="undoLast()">↩ 復原</button>
+      <button class="btn-ctrl danger" onclick="confirmReset()">重置</button>
+    </div>
+  </div>
+
+  <!-- Team B -->
+  <div class="score-panel" id="panelB">
+    <div class="swipe-hint top">↑ +1</div>
+    <div class="swipe-flash" id="flashB" style="background:var(--b-color)"></div>
+    <div class="team-name" id="nameB" onclick="editName('B')">隊伍 B</div>
+    <div class="set-dots" id="dotsB"></div>
+    <div class="score-num" id="scoreB" onclick="addScore('B')">0</div>
+    <div class="score-controls">
+      <button class="btn-score btn-minus-b" onclick="addScore('B',-1)">−</button>
+      <button class="btn-score btn-plus-b"  onclick="addScore('B',+1)">+</button>
+    </div>
+    <div class="swipe-hint bot">↓ −1</div>
+  </div>
+
+  <!-- History bar -->
+  <div id="history-bar">
+    <span id="hist-label">得分記錄：</span>
+  </div>
+</div>
+
+<!-- Remote control UI (shown on second device) -->
+<div id="remote-ui">
+  <div id="remote-topbar">
+    <div><span id="remote-status-dot"></span><span id="remote-status-text">連線中…</span></div>
+    <div id="remote-code-badge"></div>
+    <div style="font-size:11px;color:var(--muted)">遙控器</div>
+  </div>
+  <div id="remote-body">
+    <button class="rem-score-btn" id="rem-a" onclick="sendRemoteCmd('scoreA')">A</button>
+    <div id="rem-center">
+      <button class="rem-ctrl-btn" onclick="sendRemoteCmd('undo')" title="復原">↩</button>
+      <button class="rem-ctrl-btn" onclick="sendRemoteCmd('timer')" title="計時">⏱</button>
+    </div>
+    <button class="rem-score-btn" id="rem-b" onclick="sendRemoteCmd('scoreB')">B</button>
+  </div>
+  <div id="remote-hint">點左右大按鈕計分　↩ 復原　⏱ 計時</div>
+</div>
+
+<!-- Network remote modal -->
+<div class="modal-overlay" id="netModal">
+  <div class="modal">
+    <h3>📡 網路遙控</h3>
+    <p id="net-status-msg">點「建立房間」產生連線碼，用其他裝置掃 QR code 即可遙控。</p>
+
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <button class="btn-confirm" id="netStartBtn" onclick="startNetHost()" style="flex:1">建立房間</button>
+      <button class="btn-cancel" id="netStopBtn" onclick="stopNetHost()" style="flex:1;display:none">關閉房間</button>
+    </div>
+
+    <div id="net-room-section" style="display:none">
+      <div id="net-room-display"></div>
+      <div id="net-conn-count">等待裝置連線…</div>
+      <div id="net-qr"><img id="net-qr-img" src="" alt="QR Code" width="180" height="180"></div>
+      <div style="font-size:11px;color:var(--muted);text-align:center">掃描 QR code 或手動輸入房間碼</div>
+    </div>
+
+    <div class="modal-row" style="margin-top:12px">
+      <button class="btn-cancel" onclick="closeModal('netModal')">關閉</button>
+    </div>
+  </div>
+</div>
+
+<!-- Win banner -->
+<div id="win-banner">
+  <h1 id="win-title"></h1>
+  <p id="win-sub"></p>
+  <button class="btn-new" onclick="closeWinBanner()">繼續 / 新比賽</button>
+</div>
+
+<!-- Name edit modal -->
+<div class="modal-overlay" id="nameModal">
+  <div class="modal">
+    <h3>修改隊伍名稱</h3>
+    <label>名稱</label>
+    <input type="text" id="nameInput" maxlength="20" placeholder="隊伍名稱">
+    <div class="modal-row">
+      <button class="btn-cancel" onclick="closeModal('nameModal')">取消</button>
+      <button class="btn-confirm" onclick="saveName()">確認</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings modal -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <h3>⚙ 比賽設定</h3>
+
+    <label>局數制（先贏幾局）</label>
+    <select id="setsToWin">
+      <option value="1">1 局制</option>
+      <option value="2" selected>3 局 2 勝</option>
+      <option value="3">5 局 3 勝</option>
+    </select>
+
+    <label>每局分數上限</label>
+    <input type="number" id="scoreLimit" value="21" min="5" max="99">
+
+    <div class="toggle-row">
+      <span>平分追加（Deuce）</span>
+      <button class="toggle on" id="deuceToggle" onclick="toggleDeuce()"></button>
+    </div>
+
+    <div class="toggle-row">
+      <span>得分音效</span>
+      <button class="toggle on" id="soundToggle" onclick="toggleSound()"></button>
+    </div>
+
+    <div class="toggle-row">
+      <span>自動計時</span>
+      <button class="toggle" id="autoTimerToggle" onclick="toggleAutoTimer()"></button>
+    </div>
+
+    <div class="modal-row">
+      <button class="btn-cancel" onclick="closeModal('settingsModal')">關閉</button>
+      <button class="btn-confirm" onclick="saveSettings()">套用</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reset confirm modal -->
+<div class="modal-overlay" id="resetModal">
+  <div class="modal">
+    <h3>確認重置？</h3>
+    <p style="margin-bottom:16px;color:var(--muted);font-size:14px;">將清除本場所有比分與記錄。</p>
+    <div class="modal-row">
+      <button class="btn-cancel" onclick="closeModal('resetModal')">取消</button>
+      <button class="btn-danger-confirm" onclick="resetMatch()">確認重置</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bluetooth modal -->
+<div class="modal-overlay" id="btModal">
+  <div class="modal">
+    <h3>📡 藍牙遙控</h3>
+    <p id="bt-info">
+      支援藍牙 BLE 裝置（智慧型手錶、遙控按鈕等）。<br>
+      連線後使用「學習」模式指定每顆按鍵的功能。<br>
+      <span style="color:#ef9a9a;font-size:11px">⚠ 需使用 Chrome 瀏覽器，iOS 不支援</span>
+    </p>
+
+    <div id="bt-learn-hint">請在裝置上按下要指定的按鍵…</div>
+
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <button class="btn-confirm" id="btConnectBtn" onclick="toggleBtConnect()" style="flex:1">搜尋並連線</button>
+      <button class="btn-cancel" onclick="clearBtMapping()" style="flex:0 0 auto;padding:12px 14px" title="清除所有對應">清除</button>
+    </div>
+
+    <div id="bt-mapping-section">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">按鍵對應（連線後可學習）：</div>
+      <table class="bt-map-table">
+        <tbody>
+          <tr>
+            <td>A 隊得分</td>
+            <td id="map-label-scoreA">--</td>
+            <td><button class="btn-learn" id="learn-scoreA" onclick="startLearn('scoreA')">學習</button></td>
+          </tr>
+          <tr>
+            <td>B 隊得分</td>
+            <td id="map-label-scoreB">--</td>
+            <td><button class="btn-learn" id="learn-scoreB" onclick="startLearn('scoreB')">學習</button></td>
+          </tr>
+          <tr>
+            <td>復原</td>
+            <td id="map-label-undo">--</td>
+            <td><button class="btn-learn" id="learn-undo" onclick="startLearn('undo')">學習</button></td>
+          </tr>
+          <tr>
+            <td>計時器</td>
+            <td id="map-label-timer">--</td>
+            <td><button class="btn-learn" id="learn-timer" onclick="startLearn('timer')">學習</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="modal-row" style="margin-top:8px">
+      <button class="btn-cancel" onclick="closeModal('btModal')">關閉</button>
+    </div>
+  </div>
+</div>
+
+<!-- Next set modal -->
+<div class="modal-overlay" id="nextSetModal">
+  <div class="modal">
+    <h3 id="nextSetTitle">第 1 局結束</h3>
+    <table id="summary-table">
+      <thead><tr><th>局</th><th id="colA">隊伍 A</th><th id="colB">隊伍 B</th></tr></thead>
+      <tbody id="summaryBody"></tbody>
+    </table>
+    <div class="modal-row">
+      <button class="btn-cancel" onclick="closeModal('nextSetModal')">取消</button>
+      <button class="btn-confirm" onclick="doNextSet()">開始下一局</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──
+let state = {
+  nameA: '隊伍 A',
+  nameB: '隊伍 B',
+  scoreA: 0,
+  scoreB: 0,
+  setsA: 0,
+  setsB: 0,
+  currentSet: 1,
+  setHistory: [],   // [{a, b}]
+  serving: 'A',
+  history: [],      // {side, a, b, time}
+  settings: {
+    setsToWin: 2,
+    scoreLimit: 21,
+    deuce: true,
+    sound: true,
+    autoTimer: false,
+  },
+  timerRunning: false,
+  timerMs: 0,
+  timerStart: null,
+};
+
+let timerInterval = null;
+let editingTeam = null;
+let audioCtx = null;
+
+// ── Audio ──
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+function beep(freq = 880, dur = 80, vol = 0.3) {
+  if (!state.settings.sound) return;
+  try {
+    const ctx = getAudioCtx();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur / 1000);
+    o.start(); o.stop(ctx.currentTime + dur / 1000);
+  } catch(e) {}
+}
+function winSound() {
+  [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep(f, 150, 0.4), i * 120));
+}
+
+// ── Timer ──
+function toggleTimer() {
+  if (state.timerRunning) {
+    state.timerMs += Date.now() - state.timerStart;
+    state.timerRunning = false;
+    clearInterval(timerInterval);
+  } else {
+    state.timerStart = Date.now();
+    state.timerRunning = true;
+    timerInterval = setInterval(renderTimer, 500);
+  }
+  renderTimer();
+}
+function renderTimer() {
+  const ms = state.timerRunning ? state.timerMs + (Date.now() - state.timerStart) : state.timerMs;
+  const total = Math.floor(ms / 1000);
+  const m = Math.floor(total / 60).toString().padStart(2, '0');
+  const s = (total % 60).toString().padStart(2, '0');
+  const el = document.getElementById('timer-display');
+  el.textContent = `${m}:${s}`;
+  el.classList.toggle('running', state.timerRunning);
+}
+function resetTimer() {
+  clearInterval(timerInterval);
+  state.timerRunning = false;
+  state.timerMs = 0;
+  state.timerStart = null;
+  renderTimer();
+}
+
+// ── Scoring ──
+function addScore(side, delta = 1) {
+  if (delta === 1 && state.settings.autoTimer && !state.timerRunning) toggleTimer();
+
+  const key = 'score' + side;
+  const newVal = Math.max(0, state[key] + delta);
+  if (delta > 0 && newVal > getMaxScore()) return;
+
+  state.history.push({ side: delta > 0 ? side : null, undo: true, a: state.scoreA, b: state.scoreB });
+  state[key] = newVal;
+
+  if (delta > 0) {
+    beep(side === 'A' ? 660 : 880);
+    updateServing(side);
+    addHistItem(side, state.scoreA, state.scoreB);
+    checkSetWin();
+  }
+  render();
+  save();
+}
+
+function getMaxScore() {
+  const lim = state.settings.scoreLimit;
+  if (!state.settings.deuce) return lim;
+  const a = state.scoreA, b = state.scoreB;
+  // At deuce threshold, extend by 2 each time
+  if (a >= lim - 1 && b >= lim - 1) return Math.max(a, b) + 1;
+  return lim;
+}
+
+function updateServing(scored) {
+  // Simple: serve changes every point after first serve (standard badminton: scorer keeps serve)
+  state.serving = scored;
+}
+
+function checkSetWin() {
+  const lim = state.settings.scoreLimit;
+  const a = state.scoreA, b = state.scoreB;
+  const deuce = state.settings.deuce;
+
+  let winner = null;
+  if (!deuce) {
+    if (a >= lim) winner = 'A';
+    else if (b >= lim) winner = 'B';
+  } else {
+    if (a >= lim && a - b >= 2) winner = 'A';
+    else if (b >= lim && b - a >= 2) winner = 'B';
+    // Hard cap at 30
+    if (a >= 30) winner = 'A';
+    if (b >= 30) winner = 'B';
+  }
+
+  if (winner) {
+    const el = document.getElementById('score' + winner);
+    el.classList.add('win-flash');
+    setTimeout(() => el.classList.remove('win-flash'), 700);
+    winSound();
+    state['sets' + winner]++;
+    state.setHistory.push({ a, b });
+    addHistItem('set-end', a, b);
+
+    const toWin = state.settings.setsToWin;
+    if (state.setsA >= toWin || state.setsB >= toWin) {
+      setTimeout(() => showWinner(winner), 800);
+    } else {
+      setTimeout(() => openNextSetModal(), 800);
+    }
+  }
+}
+
+function showWinner(winner) {
+  const name = winner === 'A' ? state.nameA : state.nameB;
+  document.getElementById('win-title').textContent = `🏆 ${name} 獲勝！`;
+  const total = state.setHistory.map((s, i) => `第${i+1}局 ${s.a}:${s.b}`).join('　');
+  document.getElementById('win-sub').textContent = total;
+  document.getElementById('win-banner').classList.add('open');
+  if (state.timerRunning) toggleTimer();
+}
+function closeWinBanner() {
+  document.getElementById('win-banner').classList.remove('open');
+}
+
+// ── Undo ──
+function undoLast() {
+  const last = state.history.pop();
+  if (!last) return;
+  state.scoreA = last.a;
+  state.scoreB = last.b;
+  beep(440, 60, 0.2);
+  removeLastHistItem();
+  render();
+  save();
+}
+
+// ── Next set ──
+function nextSet() {
+  openNextSetModal();
+}
+function openNextSetModal() {
+  const n = state.setHistory.length;
+  document.getElementById('nextSetTitle').textContent = `第 ${n} 局結束`;
+  document.getElementById('colA').textContent = state.nameA;
+  document.getElementById('colB').textContent = state.nameB;
+  const body = document.getElementById('summaryBody');
+  body.innerHTML = state.setHistory.map((s, i) =>
+    `<tr><td>第 ${i+1} 局</td><td style="color:var(--a-color)">${s.a}</td><td style="color:var(--b-color)">${s.b}</td></tr>`
+  ).join('') || '<tr><td colspan="3" style="color:var(--muted)">尚無記錄</td></tr>';
+  openModal('nextSetModal');
+}
+function doNextSet() {
+  closeModal('nextSetModal');
+  state.scoreA = 0;
+  state.scoreB = 0;
+  state.currentSet++;
+  state.history = [];
+  clearHistBar();
+  resetTimer();
+  render();
+  save();
+}
+
+// ── Reset ──
+function confirmReset() { openModal('resetModal'); }
+function resetMatch() {
+  closeModal('resetModal');
+  state.scoreA = 0; state.scoreB = 0;
+  state.setsA = 0; state.setsB = 0;
+  state.currentSet = 1;
+  state.setHistory = [];
+  state.history = [];
+  state.serving = 'A';
+  clearHistBar();
+  resetTimer();
+  render();
+  save();
+}
+
+// ── Name edit ──
+function editName(team) {
+  editingTeam = team;
+  document.getElementById('nameInput').value = state['name' + team];
+  openModal('nameModal');
+  setTimeout(() => document.getElementById('nameInput').focus(), 100);
+}
+function saveName() {
+  const v = document.getElementById('nameInput').value.trim();
+  if (v && editingTeam) {
+    state['name' + editingTeam] = v;
+    document.getElementById('colA').textContent = state.nameA;
+    document.getElementById('colB').textContent = state.nameB;
+  }
+  closeModal('nameModal');
+  render();
+  save();
+}
+document.getElementById('nameInput').addEventListener('keydown', e => { if (e.key === 'Enter') saveName(); });
+
+// ── Settings ──
+function openSettings() {
+  const s = state.settings;
+  document.getElementById('setsToWin').value = s.setsToWin;
+  document.getElementById('scoreLimit').value = s.scoreLimit;
+  setToggleUI('deuceToggle', s.deuce);
+  setToggleUI('soundToggle', s.sound);
+  setToggleUI('autoTimerToggle', s.autoTimer);
+  openModal('settingsModal');
+}
+function saveSettings() {
+  state.settings.setsToWin = parseInt(document.getElementById('setsToWin').value);
+  state.settings.scoreLimit = parseInt(document.getElementById('scoreLimit').value) || 21;
+  closeModal('settingsModal');
+  save();
+}
+function toggleDeuce()      { state.settings.deuce = !state.settings.deuce; setToggleUI('deuceToggle', state.settings.deuce); }
+function toggleSound()      { state.settings.sound = !state.settings.sound; setToggleUI('soundToggle', state.settings.sound); }
+function toggleAutoTimer()  { state.settings.autoTimer = !state.settings.autoTimer; setToggleUI('autoTimerToggle', state.settings.autoTimer); }
+
+// ── History bar ──
+function addHistItem(side, a, b) {
+  const bar = document.getElementById('history-bar');
+  const el = document.createElement('span');
+  el.className = 'hist-item ' + (side === 'set-end' ? 'set-end' : side.toLowerCase());
+  el.textContent = side === 'set-end' ? `【局末 ${a}:${b}】` : `${a}:${b}`;
+  el.dataset.hist = '1';
+  bar.appendChild(el);
+  bar.scrollLeft = bar.scrollWidth;
+}
+function removeLastHistItem() {
+  const bar = document.getElementById('history-bar');
+  const items = bar.querySelectorAll('[data-hist]');
+  if (items.length) items[items.length - 1].remove();
+}
+function clearHistBar() {
+  const bar = document.getElementById('history-bar');
+  bar.querySelectorAll('[data-hist]').forEach(el => el.remove());
+}
+
+// ── Render ──
+function render() {
+  document.getElementById('nameA').textContent = state.nameA;
+  document.getElementById('nameB').textContent = state.nameB;
+  document.getElementById('scoreA').textContent = state.scoreA;
+  document.getElementById('scoreB').textContent = state.scoreB;
+  document.getElementById('setsA').textContent = state.setsA;
+  document.getElementById('setsB').textContent = state.setsB;
+  document.getElementById('set-label').textContent = `第 ${state.currentSet} 局`;
+
+  document.getElementById('panelA').classList.toggle('serving', state.serving === 'A');
+  document.getElementById('panelB').classList.toggle('serving', state.serving === 'B');
+
+  const toWin = state.settings.setsToWin;
+  ['A', 'B'].forEach(side => {
+    const dots = document.getElementById('dots' + side);
+    dots.innerHTML = Array.from({length: toWin}, (_, i) =>
+      `<div class="dot ${i < state['sets' + side] ? 'won-' + side.toLowerCase() : ''}"></div>`
+    ).join('');
+  });
+}
+
+// ── Modal helpers ──
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(overlay.id); });
+});
+function setToggleUI(id, on) {
+  document.getElementById(id).classList.toggle('on', on);
+}
+
+// ── Keyboard ──
+document.addEventListener('keydown', e => {
+  if (document.querySelector('.modal-overlay.open')) return;
+  if (e.key === 'ArrowLeft'  || e.key === 'a' || e.key === 'A') addScore('A');
+  if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') addScore('B');
+  if (e.key === 'z' || e.key === 'Z') undoLast();
+  if (e.key === ' ') { e.preventDefault(); toggleTimer(); }
+});
+
+// ── Persist ──
+function save() {
+  try { localStorage.setItem('scoreboard', JSON.stringify(state)); } catch(e) {}
+}
+function load() {
+  try {
+    const raw = localStorage.getItem('scoreboard');
+    if (raw) {
+      const saved = JSON.parse(raw);
+      Object.assign(state, saved);
+      // Restore timer correctly
+      state.timerRunning = false;
+      if (state.timerInterval) clearInterval(state.timerInterval);
+    }
+  } catch(e) {}
+}
+
+// ── Swipe gestures ──
+function initSwipeGestures() {
+  ['A', 'B'].forEach(side => {
+    const panel = document.getElementById('panel' + side);
+    let startY = 0, startX = 0;
+
+    panel.addEventListener('touchstart', e => {
+      startY = e.touches[0].clientY;
+      startX = e.touches[0].clientX;
+    }, { passive: true });
+
+    panel.addEventListener('touchend', e => {
+      const dy = e.changedTouches[0].clientY - startY;
+      const dx = e.changedTouches[0].clientX - startX;
+      const absDy = Math.abs(dy), absDx = Math.abs(dx);
+
+      if (absDy < 50 || absDy < absDx * 1.5) return;
+
+      // Prevent the browser from firing a click event after the swipe
+      e.preventDefault();
+
+      const delta = dy < 0 ? 1 : -1;
+      addScore(side, delta);
+
+      const flash = document.getElementById('flash' + side);
+      flash.className = 'swipe-flash ' + (delta > 0 ? 'up' : 'down');
+      setTimeout(() => flash.className = 'swipe-flash', 260);
+    });
+  });
+}
+
+// ── Network Remote ──
+const PEER_PREFIX = 'sbrd-';
+let netPeer = null;
+let netRemoteConns = [];
+let netHostConn = null;
+let isRemoteMode = false;
+
+function genRoomCode() {
+  return Math.random().toString(36).substr(2, 6).toUpperCase();
+}
+
+// ── Host side ──
+function startNetHost() {
+  const code = genRoomCode();
+  const peerId = PEER_PREFIX + code;
+  document.getElementById('netStartBtn').textContent = '建立中…';
+  document.getElementById('netStartBtn').disabled = true;
+
+  netPeer = new Peer(peerId);
+  netPeer.on('open', () => {
+    renderNetRoom(code);
+  });
+  netPeer.on('connection', conn => {
+    netRemoteConns.push(conn);
+    updateNetConnCount();
+    conn.on('data', cmd => handleNetCmd(cmd));
+    conn.on('close', () => {
+      netRemoteConns = netRemoteConns.filter(c => c !== conn);
+      updateNetConnCount();
+    });
+  });
+  netPeer.on('error', err => {
+    document.getElementById('net-status-msg').textContent = '連線失敗：' + err.type;
+    document.getElementById('netStartBtn').textContent = '建立房間';
+    document.getElementById('netStartBtn').disabled = false;
+  });
+}
+
+function stopNetHost() {
+  if (netPeer) { netPeer.destroy(); netPeer = null; }
+  netRemoteConns = [];
+  document.getElementById('net-room-section').style.display = 'none';
+  document.getElementById('netStartBtn').style.display = '';
+  document.getElementById('netStopBtn').style.display = 'none';
+  document.getElementById('netStartBtn').textContent = '建立房間';
+  document.getElementById('netStartBtn').disabled = false;
+  document.getElementById('net-status-msg').textContent = '點「建立房間」產生連線碼，用其他裝置掃 QR code 即可遙控。';
+  document.getElementById('netBtn').classList.remove('bt-on');
+}
+
+function renderNetRoom(code) {
+  const remoteUrl = location.href.split('?')[0] + '?remote=' + code;
+  document.getElementById('net-room-display').textContent = code;
+  document.getElementById('net-room-section').style.display = 'block';
+  document.getElementById('netStartBtn').style.display = 'none';
+  document.getElementById('netStopBtn').style.display = '';
+  document.getElementById('net-status-msg').textContent = '房間已建立，等待裝置連線…';
+  document.getElementById('net-qr-img').src =
+    'https://api.qrserver.com/v1/create-qr-code/?size=180x180&color=e0e6f0&bgcolor=112240&data=' +
+    encodeURIComponent(remoteUrl);
+  document.getElementById('netBtn').classList.add('bt-on');
+}
+
+function updateNetConnCount() {
+  const n = netRemoteConns.length;
+  const el = document.getElementById('net-conn-count');
+  if (!el) return;
+  el.textContent = n > 0 ? `已連線 ${n} 個遙控裝置` : '等待裝置連線…';
+  el.className = n > 0 ? 'has-conn' : '';
+}
+
+function handleNetCmd(cmd) {
+  if (cmd === 'scoreA') addScore('A');
+  else if (cmd === 'scoreB') addScore('B');
+  else if (cmd === 'undo') undoLast();
+  else if (cmd === 'timer') toggleTimer();
+}
+
+function openNetModal() {
+  openModal('netModal');
+}
+
+// ── Remote side ──
+function initRemoteMode(code) {
+  isRemoteMode = true;
+  document.getElementById('remote-ui').classList.add('active');
+  document.getElementById('remote-code-badge').textContent = code;
+
+  if (typeof Peer === 'undefined') {
+    setRemoteStatus('err', 'PeerJS 載入失敗，請檢查網路');
+    return;
+  }
+
+  netPeer = new Peer();
+  netPeer.on('open', () => {
+    netHostConn = netPeer.connect(PEER_PREFIX + code, { reliable: true });
+    netHostConn.on('open', () => setRemoteStatus('ok', '已連線'));
+    netHostConn.on('close', () => setRemoteStatus('err', '已斷線'));
+    netHostConn.on('error', () => setRemoteStatus('err', '連線失敗'));
+  });
+  netPeer.on('error', () => setRemoteStatus('err', '無法連線，請確認房間碼'));
+}
+
+function setRemoteStatus(type, msg) {
+  const dot = document.getElementById('remote-status-dot');
+  const txt = document.getElementById('remote-status-text');
+  dot.className = type;
+  txt.textContent = msg;
+}
+
+function sendRemoteCmd(cmd) {
+  if (netHostConn && netHostConn.open) {
+    netHostConn.send(cmd);
+    beep(cmd === 'scoreA' ? 660 : cmd === 'scoreB' ? 880 : 440, 60, 0.2);
+    const btnId = cmd === 'scoreA' ? 'rem-a' : cmd === 'scoreB' ? 'rem-b' : null;
+    if (btnId) {
+      const el = document.getElementById(btnId);
+      el.style.filter = 'brightness(1.5)';
+      setTimeout(() => el.style.filter = '', 120);
+    }
+  } else {
+    setRemoteStatus('err', '未連線');
+  }
+}
+
+// ── Bluetooth ──
+const BT_SERVICES = [
+  'battery_service',
+  '0000ffe0-0000-1000-8000-00805f9b34fb', // HM-10 / common BLE dongle
+  '6e400001-b5a3-f393-e0a9-e50e24dcca9e', // Nordic UART
+  '0000180f-0000-1000-8000-00805f9b34fb', // Battery
+  '0000180a-0000-1000-8000-00805f9b34fb', // Device Info
+  '00001812-0000-1000-8000-00805f9b34fb', // HID
+  '0000fee0-0000-1000-8000-00805f9b34fb', // Fitbit / Mi Band
+  '0000fee7-0000-1000-8000-00805f9b34fb',
+];
+
+let bt = {
+  device: null,
+  characteristics: [],
+  mapping: {},   // valueKey -> action
+  learning: null,
+};
+
+function btValueKey(dataView) {
+  const arr = [];
+  for (let i = 0; i < Math.min(dataView.byteLength, 8); i++) arr.push(dataView.getUint8(i));
+  return arr.join('-');
+}
+
+function handleBtNotification(event) {
+  const key = btValueKey(event.target.value);
+  if (bt.learning) {
+    bt.mapping[key] = bt.learning;
+    bt.learning = null;
+    saveBtMapping();
+    renderBtModal();
+    beep(660, 100, 0.3);
+    return;
+  }
+  const action = bt.mapping[key];
+  if (action === 'scoreA') addScore('A');
+  else if (action === 'scoreB') addScore('B');
+  else if (action === 'undo') undoLast();
+  else if (action === 'timer') toggleTimer();
+}
+
+async function toggleBtConnect() {
+  if (bt.device && bt.device.gatt.connected) {
+    bt.device.gatt.disconnect();
+    bt.device = null;
+    bt.characteristics = [];
+    renderBtStatus();
+    renderBtModal();
+    return;
+  }
+  if (!navigator.bluetooth) {
+    alert('此瀏覽器不支援 Web Bluetooth。\n請使用 Android Chrome 或桌面版 Chrome。');
+    return;
+  }
+  const btn = document.getElementById('btConnectBtn');
+  btn.textContent = '搜尋中…';
+  btn.disabled = true;
+  try {
+    bt.device = await navigator.bluetooth.requestDevice({
+      acceptAllDevices: true,
+      optionalServices: BT_SERVICES,
+    });
+    bt.device.addEventListener('gattserverdisconnected', () => {
+      bt.device = null;
+      bt.characteristics = [];
+      renderBtStatus();
+      renderBtModal();
+    });
+    const server = await bt.device.gatt.connect();
+    const services = await server.getPrimaryServices();
+    for (const svc of services) {
+      let chars;
+      try { chars = await svc.getCharacteristics(); } catch(e) { continue; }
+      for (const char of chars) {
+        if (char.properties.notify || char.properties.indicate) {
+          try {
+            await char.startNotifications();
+            char.addEventListener('characteristicvaluechanged', handleBtNotification);
+            bt.characteristics.push(char);
+          } catch(e) {}
+        }
+      }
+    }
+    beep(880, 120, 0.3);
+  } catch(e) {
+    if (e.name !== 'NotFoundError') alert('連線失敗：' + e.message);
+  }
+  renderBtStatus();
+  renderBtModal();
+}
+
+function startLearn(action) {
+  if (!bt.device || !bt.device.gatt.connected) {
+    alert('請先連線藍牙裝置。');
+    return;
+  }
+  bt.learning = action;
+  renderBtModal();
+}
+
+function clearBtMapping() {
+  bt.mapping = {};
+  bt.learning = null;
+  saveBtMapping();
+  renderBtModal();
+}
+
+function saveBtMapping() {
+  try { localStorage.setItem('btMapping', JSON.stringify(bt.mapping)); } catch(e) {}
+}
+function loadBtMapping() {
+  try {
+    const raw = localStorage.getItem('btMapping');
+    if (raw) bt.mapping = JSON.parse(raw);
+  } catch(e) {}
+}
+
+function actionLabel(key) {
+  const mapped = Object.entries(bt.mapping).find(([, v]) => v === key);
+  return mapped ? `[${mapped[0].split('-').slice(0,3).join('-')}…]` : '--';
+}
+
+function renderBtStatus() {
+  const connected = bt.device && bt.device.gatt.connected;
+  const dot = document.getElementById('bt-dot');
+  const btn = document.getElementById('btBtn');
+  if (dot) dot.className = connected ? 'connected' : '';
+  if (btn) btn.classList.toggle('bt-on', connected);
+}
+
+function renderBtModal() {
+  const connected = bt.device && bt.device.gatt.connected;
+  const connBtn = document.getElementById('btConnectBtn');
+  if (connBtn) {
+    connBtn.textContent = connected ? '中斷連線' : '搜尋並連線';
+    connBtn.disabled = false;
+    connBtn.className = connected ? 'btn-danger-confirm' : 'btn-confirm';
+  }
+  const hint = document.getElementById('bt-learn-hint');
+  if (hint) hint.style.display = bt.learning ? 'block' : 'none';
+  const dot = document.getElementById('bt-dot');
+  if (dot) dot.className = bt.learning ? 'learning' : (connected ? 'connected' : '');
+
+  ['scoreA', 'scoreB', 'undo', 'timer'].forEach(action => {
+    const label = document.getElementById('map-label-' + action);
+    const learnBtn = document.getElementById('learn-' + action);
+    const mapped = Object.entries(bt.mapping).find(([, v]) => v === action);
+    if (label) label.textContent = mapped ? mapped[0].split('-').slice(0,4).join('-') + '…' : '--';
+    if (learnBtn) {
+      learnBtn.className = 'btn-learn' + (bt.learning === action ? ' active' : mapped ? ' mapped' : '');
+      learnBtn.textContent = bt.learning === action ? '等待中…' : '學習';
+    }
+  });
+}
+
+function openBtModal() {
+  renderBtModal();
+  openModal('btModal');
+}
+
+// ── SW registration ──
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+
+// ── Init ──
+const _remoteCode = new URLSearchParams(location.search).get('remote');
+if (_remoteCode) {
+  initRemoteMode(_remoteCode.toUpperCase());
+} else {
+  load();
+  loadBtMapping();
+  render();
+  renderTimer();
+  renderBtStatus();
+  initSwipeGestures();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <defs>
+    <clipPath id="rounded">
+      <rect width="192" height="192" rx="38"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background -->
+  <rect width="192" height="192" rx="38" fill="#111"/>
+
+  <!-- Left half - blue -->
+  <rect x="0" y="0" width="96" height="192" fill="#1a6fd4" clip-path="url(#rounded)"/>
+
+  <!-- Right half - red/orange -->
+  <rect x="96" y="0" width="96" height="192" fill="#e04030" clip-path="url(#rounded)"/>
+
+  <!-- Center divider line -->
+  <rect x="93" y="0" width="6" height="150" fill="#00000033"/>
+
+  <!-- Score numbers -->
+  <text x="48" y="126" font-size="108" font-weight="900" text-anchor="middle"
+        font-family="Arial Black, Arial, sans-serif" fill="white" opacity="0.95">2</text>
+  <text x="144" y="126" font-size="108" font-weight="900" text-anchor="middle"
+        font-family="Arial Black, Arial, sans-serif" fill="white" opacity="0.95">0</text>
+
+  <!-- Bottom timer bar -->
+  <rect x="0" y="150" width="192" height="42" fill="#111111cc" clip-path="url(#rounded)"/>
+
+  <!-- Play triangle -->
+  <polygon points="18,162 18,180 30,171" fill="white" opacity="0.85"/>
+
+  <!-- Timer text -->
+  <text x="96" y="176" font-size="18" font-weight="600" text-anchor="middle"
+        font-family="'Courier New', monospace" fill="white" opacity="0.85" letter-spacing="1">00:00</text>
+
+  <!-- Stop square -->
+  <rect x="163" y="163" width="14" height="14" rx="2" fill="white" opacity="0.85"/>
+</svg>
