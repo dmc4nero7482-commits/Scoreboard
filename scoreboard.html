@@ -701,6 +701,33 @@
   }
   #tut-ok:active { transform: scale(0.94); }
 
+  /* ── Install guide ── */
+  .install-step {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+  }
+  .install-step:last-child { border-bottom: none; }
+  .install-step-num {
+    width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+    background: #1e88e5; color: white; font-size: 0.82em; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .install-step-body { flex: 1; font-size: 0.9em; line-height: 1.6; color: var(--text); }
+  .install-step-body b { color: #fff; }
+  .install-os-tab { display: flex; gap: 8px; margin-bottom: 16px; }
+  .install-os-btn {
+    flex: 1; padding: 9px; border-radius: 10px; border: 1px solid var(--border);
+    font-size: 0.9em; font-weight: 700; cursor: pointer;
+    background: var(--bg); color: var(--muted); transition: all 0.15s;
+  }
+  .install-os-btn.active { background: #1e88e5; border-color: #1e88e5; color: white; }
+  .install-icon-inline {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; border-radius: 5px;
+    background: var(--bg); border: 1px solid var(--border);
+    vertical-align: middle; font-size: 14px; margin: 0 2px;
+  }
+
   /* ── Win banner ── */
   #win-banner {
     display: none;
@@ -980,9 +1007,51 @@
       <button class="btn-cancel"  onclick="closeModal('moreModal');enterPresentation()" style="text-align:left;padding:12px 16px">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:6px"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>全螢幕
       </button>
+      <button id="sb-install-menu-btn" class="btn-cancel" onclick="closeModal('moreModal');openInstallGuide()" style="text-align:left;padding:12px 16px;display:none">📲 安裝到手機</button>
     </div>
     <div class="modal-row" style="margin-top:12px">
       <button class="btn-cancel" onclick="closeModal('moreModal')">關閉</button>
+    </div>
+  </div>
+</div>
+
+<!-- 安裝教學 -->
+<div class="modal-overlay" id="installModal">
+  <div class="modal" style="max-width:400px">
+    <h3>📲 安裝到手機主畫面</h3>
+    <div class="install-os-tab">
+      <button class="install-os-btn" id="sb-tab-android" onclick="switchInstallTab('android')">🤖 Android</button>
+      <button class="install-os-btn" id="sb-tab-ios"     onclick="switchInstallTab('ios')"> iPhone / iPad</button>
+    </div>
+    <div id="sb-install-android">
+      <div id="sb-install-android-native" style="display:none;margin-bottom:14px">
+        <p style="font-size:0.85em;color:var(--muted);margin-bottom:10px">偵測到您的瀏覽器支援直接安裝：</p>
+        <button class="btn-confirm" style="width:100%;padding:12px;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer" onclick="triggerInstall()">📲 立即安裝到主畫面</button>
+      </div>
+      <p style="font-size:0.82em;color:var(--muted);margin-bottom:10px" id="sb-install-android-or">手動安裝步驟（Chrome 瀏覽器）：</p>
+      <div class="install-step"><div class="install-step-num">1</div><div class="install-step-body">使用 <b>Chrome</b> 瀏覽器開啟此頁面</div></div>
+      <div class="install-step"><div class="install-step-num">2</div><div class="install-step-body">點右上角 <span class="install-icon-inline">⋮</span> 三點選單</div></div>
+      <div class="install-step"><div class="install-step-num">3</div><div class="install-step-body">選擇「<b>安裝應用程式</b>」或「<b>新增至主畫面</b>」</div></div>
+      <div class="install-step"><div class="install-step-num">4</div><div class="install-step-body">跳出確認視窗後點「<b>安裝</b>」即完成</div></div>
+    </div>
+    <div id="sb-install-ios" style="display:none">
+      <p style="font-size:0.82em;color:var(--muted);margin-bottom:10px">請使用 <b>Safari</b> 瀏覽器，步驟如下：</p>
+      <div class="install-step"><div class="install-step-num">1</div><div class="install-step-body">使用 <b>Safari</b> 開啟此頁面（Chrome 不支援 iOS 安裝）</div></div>
+      <div class="install-step">
+        <div class="install-step-num">2</div>
+        <div class="install-step-body">點底部工具列中間的
+          <span class="install-icon-inline"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M16 5l-1.42 1.42-1.59-1.59V16h-1.98V4.83L9.42 6.42 8 5l4-4 4 4zm4 5v11c0 1.1-.9 2-2 2H6c-1.11 0-2-.9-2-2V10c0-1.11.89-2 2-2h3v2H6v11h12V10h-3V8h3c1.1 0 2 .89 2 2z"/></svg></span>
+          <b>分享</b>按鈕（箭頭向上的方框）
+        </div>
+      </div>
+      <div class="install-step"><div class="install-step-num">3</div><div class="install-step-body">在選單中向下滑，找到並點選「<b>加入主畫面</b>」＋</div></div>
+      <div class="install-step"><div class="install-step-num">4</div><div class="install-step-body">右上角點「<b>新增</b>」確認，App 圖示會出現在桌面</div></div>
+      <p style="font-size:0.8em;color:var(--muted);margin-top:12px;padding:10px;background:var(--bg);border-radius:8px">
+        💡 安裝後從桌面開啟會以全螢幕 App 模式運行，並可在無網路時使用
+      </p>
+    </div>
+    <div class="modal-row" style="margin-top:16px">
+      <button class="btn-cancel" onclick="closeModal('installModal')">關閉</button>
     </div>
   </div>
 </div>
@@ -1844,6 +1913,60 @@ document.getElementById('setsToWin').addEventListener('keydown', e => {
 });
 
 // ── Tutorial ──
+// ── Install guide ─────────────────────────────────────────
+let deferredInstallPrompt = null;
+let _installTab = 'android';
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+});
+window.addEventListener('appinstalled', () => { deferredInstallPrompt = null; });
+
+function _isIOS() { return /iPhone|iPad|iPod/.test(navigator.userAgent) && !window.MSStream; }
+function _isAndroid() { return /Android/.test(navigator.userAgent); }
+function _isStandalone() { return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true; }
+
+function openInstallGuide() {
+  _installTab = _isIOS() ? 'ios' : 'android';
+  switchInstallTab(_installTab);
+  openModal('installModal');
+}
+
+function switchInstallTab(tab) {
+  _installTab = tab;
+  document.getElementById('sb-tab-android').classList.toggle('active', tab === 'android');
+  document.getElementById('sb-tab-ios').classList.toggle('active', tab === 'ios');
+  document.getElementById('sb-install-android').style.display = tab === 'android' ? 'block' : 'none';
+  document.getElementById('sb-install-ios').style.display = tab === 'ios' ? 'block' : 'none';
+  if (tab === 'android') {
+    const hasNative = !!deferredInstallPrompt;
+    document.getElementById('sb-install-android-native').style.display = hasNative ? 'block' : 'none';
+    document.getElementById('sb-install-android-or').textContent = hasNative ? '或手動安裝步驟（Chrome 瀏覽器）：' : '手動安裝步驟（Chrome 瀏覽器）：';
+  }
+}
+
+async function triggerInstall() {
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  const { outcome } = await deferredInstallPrompt.userChoice;
+  if (outcome === 'accepted') {
+    deferredInstallPrompt = null;
+    closeModal('installModal');
+  }
+}
+
+function checkAutoInstallGuide() {
+  if (_isStandalone()) return;
+  // Show install button in ··· menu when not standalone
+  const btn = document.getElementById('sb-install-menu-btn');
+  if (btn) btn.style.display = '';
+  if (!_isIOS() && !_isAndroid()) return;
+  if (localStorage.getItem('sb-install-guide-shown')) return;
+  localStorage.setItem('sb-install-guide-shown', '1');
+  setTimeout(() => openInstallGuide(), 800);
+}
+
 function checkTutorial() {
   if (!localStorage.getItem('tut-done')) {
     document.getElementById('tutorial-overlay').classList.add('show');
@@ -1899,6 +2022,7 @@ if (_remoteCode) {
   renderBtStatus();
   initSwipeGestures();
   checkTutorial();
+  checkAutoInstallGuide();
 }
 </script>
 </body>
