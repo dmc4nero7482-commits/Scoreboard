@@ -99,15 +99,15 @@
     position: relative;
     transition: background 0.3s;
   }
-  .score-panel.serving::after {
+  .score-panel.serving::before {
     content: '🏸';
     position: absolute;
     top: 10px;
     font-size: 20px;
     opacity: 0.9;
   }
-  #panelA { background: color-mix(in srgb, var(--a-color) 28%, var(--bg)); }
-  #panelB { background: color-mix(in srgb, var(--b-color) 28%, var(--bg)); }
+  #panelA { background: var(--a-color); }
+  #panelB { background: var(--b-color); }
 
   /* ── Set badge (center floating) ── */
   #set-badge {
@@ -141,9 +141,8 @@
     text-align: center;
     min-width: 80px;
   }
-  .team-name:hover { border-color: var(--muted); }
-  #nameA { color: var(--a-color); }
-  #nameB { color: var(--b-color); }
+  .team-name:hover { border-color: rgba(255,255,255,0.5); }
+  #nameA, #nameB { color: rgba(255,255,255,0.9); }
 
   .score-num {
     font-size: clamp(80px, 18vw, 200px);
@@ -156,8 +155,7 @@
     -webkit-tap-highlight-color: transparent;
   }
   .score-num:active { transform: scale(0.93); }
-  #scoreA { color: var(--a-color); text-shadow: 0 0 40px color-mix(in srgb, var(--a-color) 30%, transparent); }
-  #scoreB { color: var(--b-color); text-shadow: 0 0 40px color-mix(in srgb, var(--b-color) 30%, transparent); }
+  #scoreA, #scoreB { color: #ffffff; text-shadow: 0 4px 24px rgba(0,0,0,0.25); }
   .score-num.win-flash { animation: winFlash 0.6s ease; }
   @keyframes winFlash {
     0%, 100% { text-shadow: none; }
@@ -196,8 +194,9 @@
     border-radius: 50%;
     background: var(--border);
   }
-  .dot.won-a { background: var(--a-color); }
-  .dot.won-b { background: var(--b-color); }
+  .dot.won-a { background: rgba(255,255,255,0.9); }
+  .dot.won-b { background: rgba(255,255,255,0.9); }
+  .dot { background: rgba(255,255,255,0.25); }
 
   /* ── Theme swatches ── */
   .theme-swatches {
@@ -1367,7 +1366,6 @@ function stopNetHost() {
   document.getElementById('netStartBtn').textContent = '建立房間';
   document.getElementById('netStartBtn').disabled = false;
   document.getElementById('net-status-msg').textContent = '點「建立房間」產生連線碼，用其他裝置掃 QR code 即可遙控。';
-  document.getElementById('netBtn').classList.remove('bt-on');
 }
 
 function renderNetRoom(code) {
@@ -1380,7 +1378,6 @@ function renderNetRoom(code) {
   document.getElementById('net-qr-img').src =
     'https://api.qrserver.com/v1/create-qr-code/?size=180x180&color=e0e6f0&bgcolor=112240&data=' +
     encodeURIComponent(remoteUrl);
-  document.getElementById('netBtn').classList.add('bt-on');
 }
 
 function updateNetConnCount() {
@@ -1571,9 +1568,9 @@ function actionLabel(key) {
 function renderBtStatus() {
   const connected = bt.device && bt.device.gatt.connected;
   const dot = document.getElementById('bt-dot');
-  const btn = document.getElementById('btBtn');
+  const btn = document.getElementById('bt-topbar-btn');
   if (dot) dot.className = connected ? 'connected' : '';
-  if (btn) btn.classList.toggle('bt-on', connected);
+  if (btn) btn.classList.toggle('active', connected);
 }
 
 function renderBtModal() {
