@@ -34,7 +34,7 @@
   /* ── Main layout ── */
   #app {
     display: grid;
-    grid-template-rows: 48px 1fr 44px;
+    grid-template-rows: 48px 1fr;
     height: 100dvh;
   }
 
@@ -64,6 +64,8 @@
   }
   .topbar-btn:hover, .topbar-btn:active { background: #ffffff18; }
   .topbar-btn.active { color: #4caf50; }
+  .topbar-btn.danger-btn { color: #ef9a9a; }
+  .topbar-btn.danger-btn:hover { background: #3b1010; }
   #match-title {
     flex: 1;
     text-align: center;
@@ -277,41 +279,27 @@
   @keyframes flashUp   { 0%{opacity:0.28} 100%{opacity:0} }
   @keyframes flashDown { 0%{opacity:0.18} 100%{opacity:0} }
 
-  /* ── Bottom bar ── */
-  #bottom-bar {
-    display: flex;
-    align-items: center;
-    background: var(--panel-bg);
-    border-top: 1px solid var(--border);
-    overflow: hidden;
-  }
-  #history-bar {
-    flex: 1;
-    display: flex;
-    gap: 6px;
-    overflow-x: auto;
-    align-items: center;
-    padding: 0 10px;
-    scrollbar-width: none;
-    height: 100%;
-  }
-  #history-bar::-webkit-scrollbar { display: none; }
+  /* ── Timer overlay ── */
   #timer-display {
-    font-size: clamp(13px, 2vw, 16px);
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #00000066;
+    backdrop-filter: blur(4px);
+    border-radius: 20px;
+    padding: 5px 16px;
+    font-size: 15px;
     font-variant-numeric: tabular-nums;
     font-family: 'Courier New', monospace;
-    color: var(--muted);
+    color: rgba(255,255,255,0.75);
     cursor: pointer;
-    letter-spacing: 1px;
     user-select: none;
-    padding: 0 14px;
-    flex-shrink: 0;
-    border-left: 1px solid var(--border);
-    height: 100%;
-    display: flex;
-    align-items: center;
+    z-index: 5;
+    letter-spacing: 2px;
+    white-space: nowrap;
   }
-  #timer-display.running { color: #4caf50; }
+  #timer-display.running { color: #69f0ae; }
 
   /* ── Bluetooth ── */
   #bt-dot {
@@ -580,9 +568,14 @@
     </div>
     <div id="match-title" onclick="editMatchName()">羽球計分</div>
     <div class="topbar-group">
-      <button class="topbar-btn" id="bt-topbar-btn" onclick="openBtModal()" title="藍牙"><span id="bt-dot"></span>🦷</button>
+      <button class="topbar-btn" id="bt-topbar-btn" onclick="openBtModal()" title="藍牙">
+        <span id="bt-dot"></span><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.71 7.71L12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29 4.3-4.29zM13 5.83l1.88 1.88L13 9.59V5.83zm1.88 10.46L13 18.17v-3.76l1.88 1.88z"/></svg>
+      </button>
       <button class="topbar-btn" onclick="openNetModal()" title="網路遙控">📡</button>
-      <button class="topbar-btn" onclick="openMoreMenu()" title="更多">•••</button>
+      <button class="topbar-btn" onclick="nextSet()" title="下一局">⏭</button>
+      <button class="topbar-btn danger-btn" onclick="confirmReset()" title="重置">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+      </button>
     </div>
   </div>
 
@@ -616,11 +609,8 @@
       <div class="score-num" id="scoreB" onclick="addScore('B')">0</div>
       <div class="swipe-hint bot">↓</div>
     </div>
-  </div>
 
-  <!-- Bottom bar -->
-  <div id="bottom-bar">
-    <div id="history-bar"><span id="hist-label">得分：</span></div>
+    <!-- Timer overlay -->
     <div id="timer-display" onclick="toggleTimer()">00:00</div>
   </div>
 </div>
@@ -1113,25 +1103,10 @@ function toggleDeuce()      { state.settings.deuce = !state.settings.deuce; setT
 function toggleSound()      { state.settings.sound = !state.settings.sound; setToggleUI('soundToggle', state.settings.sound); }
 function toggleAutoTimer()  { state.settings.autoTimer = !state.settings.autoTimer; setToggleUI('autoTimerToggle', state.settings.autoTimer); }
 
-// ── History bar ──
-function addHistItem(side, a, b) {
-  const bar = document.getElementById('history-bar');
-  const el = document.createElement('span');
-  el.className = 'hist-item ' + (side === 'set-end' ? 'set-end' : side.toLowerCase());
-  el.textContent = side === 'set-end' ? `【局末 ${a}:${b}】` : `${a}:${b}`;
-  el.dataset.hist = '1';
-  bar.appendChild(el);
-  bar.scrollLeft = bar.scrollWidth;
-}
-function removeLastHistItem() {
-  const bar = document.getElementById('history-bar');
-  const items = bar.querySelectorAll('[data-hist]');
-  if (items.length) items[items.length - 1].remove();
-}
-function clearHistBar() {
-  const bar = document.getElementById('history-bar');
-  bar.querySelectorAll('[data-hist]').forEach(el => el.remove());
-}
+// ── History bar (removed from UI, kept as no-ops) ──
+function addHistItem(side, a, b) {}
+function removeLastHistItem() {}
+function clearHistBar() {}
 
 // ── Render ──
 function render() {
