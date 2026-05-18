@@ -278,72 +278,41 @@
   @keyframes flashUp   { 0%{opacity:0.28} 100%{opacity:0} }
   @keyframes flashDown { 0%{opacity:0.18} 100%{opacity:0} }
 
-  /* ── Center panel ── */
-  #center {
+  /* ── Bottom bar ── */
+  #bottom-bar {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    justify-content: space-between;
-    padding: 10px 6px;
-    min-width: 120px;
-    max-width: 180px;
     background: var(--panel-bg);
-    border-left: 1px solid var(--border);
-    border-right: 1px solid var(--border);
-    gap: 6px;
+    border-top: 1px solid var(--border);
+    overflow: hidden;
   }
-
+  #history-bar {
+    flex: 1;
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    align-items: center;
+    padding: 0 10px;
+    scrollbar-width: none;
+    height: 100%;
+  }
+  #history-bar::-webkit-scrollbar { display: none; }
   #timer-display {
-    font-size: clamp(13px, 2vw, 20px);
+    font-size: clamp(13px, 2vw, 16px);
     font-variant-numeric: tabular-nums;
+    font-family: 'Courier New', monospace;
     color: var(--muted);
     cursor: pointer;
     letter-spacing: 1px;
     user-select: none;
+    padding: 0 14px;
+    flex-shrink: 0;
+    border-left: 1px solid var(--border);
+    height: 100%;
+    display: flex;
+    align-items: center;
   }
   #timer-display.running { color: #4caf50; }
-
-  #set-score {
-    font-size: clamp(22px, 4vw, 42px);
-    font-weight: 900;
-    letter-spacing: 4px;
-    font-variant-numeric: tabular-nums;
-  }
-  #set-score span:first-child { color: var(--a-color); }
-  #set-score span:last-child  { color: var(--b-color); }
-  #set-score .sep { color: var(--muted); }
-
-  #set-label {
-    font-size: 11px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-  }
-
-  .center-btns {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    width: 100%;
-  }
-  .btn-ctrl {
-    width: 100%;
-    padding: 8px 4px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: #1a2f4a;
-    color: var(--text);
-    font-size: clamp(11px, 1.5vw, 14px);
-    cursor: pointer;
-    transition: background 0.15s;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .btn-ctrl:hover { background: #243b5e; }
-  .btn-ctrl.danger { border-color: #c62828; color: #ef9a9a; }
-  .btn-ctrl.danger:hover { background: #3b1010; }
-  .btn-ctrl.primary { border-color: var(--b-color); color: #90caf9; }
-  .btn-ctrl.primary:hover { background: #0d2a44; }
-  .btn-ctrl.bt-on { border-color: #4caf50; color: #81c784; }
 
   /* ── Bluetooth ── */
   #bt-dot {
@@ -388,24 +357,10 @@
     margin-bottom: 10px; display: none;
   }
 
-  /* ── Bottom history bar ── */
-  #history-bar {
-    grid-column: 1 / -1;
-    background: #0a1520;
-    border-top: 1px solid var(--border);
-    padding: 6px 12px;
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    align-items: center;
-    min-height: 40px;
-    scrollbar-width: none;
-  }
-  #history-bar::-webkit-scrollbar { display: none; }
   .hist-item {
     flex-shrink: 0;
-    font-size: 12px;
-    padding: 3px 8px;
+    font-size: 11px;
+    padding: 2px 7px;
     border-radius: 20px;
     font-variant-numeric: tabular-nums;
   }
@@ -618,44 +573,56 @@
 <body>
 
 <div id="app">
-  <!-- Team A -->
-  <div class="score-panel serving" id="panelA">
-    <div class="swipe-hint top">↑ +1</div>
-    <div class="swipe-flash" id="flashA" style="background:var(--a-color)"></div>
-    <div class="team-name" id="nameA" onclick="editName('A')">隊伍 A</div>
-    <div class="set-dots" id="dotsA"></div>
-    <div class="score-num" id="scoreA" onclick="addScore('A')">0</div>
-    <div class="swipe-hint bot">↓ −1</div>
-  </div>
-
-  <!-- Center -->
-  <div id="center">
-    <div id="timer-display" onclick="toggleTimer()">00:00</div>
-    <div id="set-label">第 1 局</div>
-    <div id="set-score"><span id="setsA">0</span><span class="sep"> : </span><span id="setsB">0</span></div>
-    <div class="center-btns">
-      <button class="btn-ctrl primary" onclick="openSettings()">⚙ 設定</button>
-      <button class="btn-ctrl" id="btBtn" onclick="openBtModal()"><span id="bt-dot"></span>藍牙遙控</button>
-      <button class="btn-ctrl" id="netBtn" onclick="openNetModal()">📡 網路遙控</button>
-      <button class="btn-ctrl" onclick="nextSet()">下一局</button>
-      <button class="btn-ctrl" onclick="undoLast()">↩ 復原</button>
-      <button class="btn-ctrl danger" onclick="confirmReset()">重置</button>
+  <!-- Top bar -->
+  <div id="topbar">
+    <div class="topbar-group">
+      <button class="topbar-btn" onclick="openSettings()" title="設定">⚙</button>
+      <button class="topbar-btn" onclick="undoLast()" title="復原">↩</button>
+    </div>
+    <div id="match-title" onclick="editMatchName()">羽球計分</div>
+    <div class="topbar-group">
+      <button class="topbar-btn" id="bt-topbar-btn" onclick="openBtModal()" title="藍牙"><span id="bt-dot"></span>🦷</button>
+      <button class="topbar-btn" onclick="openNetModal()" title="網路遙控">📡</button>
+      <button class="topbar-btn" onclick="openMoreMenu()" title="更多">•••</button>
     </div>
   </div>
 
-  <!-- Team B -->
-  <div class="score-panel" id="panelB">
-    <div class="swipe-hint top">↑ +1</div>
-    <div class="swipe-flash" id="flashB" style="background:var(--b-color)"></div>
-    <div class="team-name" id="nameB" onclick="editName('B')">隊伍 B</div>
-    <div class="set-dots" id="dotsB"></div>
-    <div class="score-num" id="scoreB" onclick="addScore('B')">0</div>
-    <div class="swipe-hint bot">↓ −1</div>
+  <!-- Score area -->
+  <div id="score-area">
+    <!-- Team A -->
+    <div class="score-panel serving" id="panelA">
+      <div class="swipe-hint top">↑</div>
+      <div class="swipe-flash" id="flashA" style="background:var(--a-color)"></div>
+      <div class="team-name" id="nameA" onclick="editName('A')">隊伍 A</div>
+      <div class="set-dots" id="dotsA"></div>
+      <div class="score-num" id="scoreA" onclick="addScore('A')">0</div>
+      <div class="swipe-hint bot">↓</div>
+    </div>
+
+    <!-- Set badge -->
+    <div id="set-badge">
+      <span class="badge-sets-a" id="setsA">0</span>
+      <span class="badge-sep">·</span>
+      <span class="badge-cur" id="set-label">第1局</span>
+      <span class="badge-sep">·</span>
+      <span class="badge-sets-b" id="setsB">0</span>
+    </div>
+
+    <!-- Team B -->
+    <div class="score-panel" id="panelB">
+      <div class="swipe-hint top">↑</div>
+      <div class="swipe-flash" id="flashB" style="background:var(--b-color)"></div>
+      <div class="team-name" id="nameB" onclick="editName('B')">隊伍 B</div>
+      <div class="set-dots" id="dotsB"></div>
+      <div class="score-num" id="scoreB" onclick="addScore('B')">0</div>
+      <div class="swipe-hint bot">↓</div>
+    </div>
   </div>
 
-  <!-- History bar -->
-  <div id="history-bar">
-    <span id="hist-label">得分記錄：</span>
+  <!-- Bottom bar -->
+  <div id="bottom-bar">
+    <div id="history-bar"><span id="hist-label">得分：</span></div>
+    <div id="timer-display" onclick="toggleTimer()">00:00</div>
   </div>
 </div>
 
@@ -781,6 +748,34 @@
     <div class="modal-row">
       <button class="btn-cancel" onclick="closeModal('resetModal')">取消</button>
       <button class="btn-danger-confirm" onclick="resetMatch()">確認重置</button>
+    </div>
+  </div>
+</div>
+
+<!-- More menu modal -->
+<div class="modal-overlay" id="moreModal">
+  <div class="modal" style="max-width:300px">
+    <h3>操作</h3>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn-confirm" onclick="closeModal('moreModal');nextSet()" style="text-align:left;padding:12px 16px">⏭ 下一局</button>
+      <button class="btn-cancel"  onclick="closeModal('moreModal');openBtModal()"  style="text-align:left;padding:12px 16px">🦷 藍牙遙控</button>
+      <button class="btn-cancel"  onclick="closeModal('moreModal');openNetModal()" style="text-align:left;padding:12px 16px">📡 網路遙控</button>
+      <button style="text-align:left;padding:12px 16px;border:1px solid #c62828;border-radius:10px;background:#3b1010;color:#ef9a9a;font-size:15px;font-weight:600;cursor:pointer" onclick="closeModal('moreModal');confirmReset()">⟳ 重置比賽</button>
+    </div>
+    <div class="modal-row" style="margin-top:12px">
+      <button class="btn-cancel" onclick="closeModal('moreModal')">關閉</button>
+    </div>
+  </div>
+</div>
+
+<!-- Match title modal -->
+<div class="modal-overlay" id="matchTitleModal">
+  <div class="modal">
+    <h3>比賽名稱</h3>
+    <input type="text" id="matchTitleInput" maxlength="30" placeholder="例：A vs B">
+    <div class="modal-row">
+      <button class="btn-cancel" onclick="closeModal('matchTitleModal')">取消</button>
+      <button class="btn-confirm" onclick="saveMatchTitle()">確認</button>
     </div>
   </div>
 </div>
@@ -923,6 +918,8 @@ function renderTimer() {
   const el = document.getElementById('timer-display');
   el.textContent = `${m}:${s}`;
   el.classList.toggle('running', state.timerRunning);
+  const topBtn = document.getElementById('timer-topbar-btn');
+  if (topBtn) { topBtn.textContent = state.timerRunning ? '⏸' : '▶'; topBtn.classList.toggle('active', state.timerRunning); }
 }
 function resetTimer() {
   clearInterval(timerInterval);
@@ -1145,7 +1142,7 @@ function render() {
   document.getElementById('scoreB').textContent = state.scoreB;
   document.getElementById('setsA').textContent = state.setsA;
   document.getElementById('setsB').textContent = state.setsB;
-  document.getElementById('set-label').textContent = `第 ${state.currentSet} 局`;
+  document.getElementById('set-label').textContent = `第${state.currentSet}局`;
 
   document.getElementById('panelA').classList.toggle('serving', state.serving === 'A');
   document.getElementById('panelB').classList.toggle('serving', state.serving === 'B');
@@ -1607,6 +1604,32 @@ function renderBtModal() {
 function openBtModal() {
   renderBtModal();
   openModal('btModal');
+}
+
+// ── Match title ──
+function editMatchName() {
+  document.getElementById('matchTitleInput').value =
+    document.getElementById('match-title').textContent;
+  openModal('matchTitleModal');
+  setTimeout(() => document.getElementById('matchTitleInput').focus(), 100);
+}
+function saveMatchTitle() {
+  const v = document.getElementById('matchTitleInput').value.trim();
+  if (v) document.getElementById('match-title').textContent = v;
+  closeModal('matchTitleModal');
+}
+document.getElementById('matchTitleInput')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') saveMatchTitle();
+});
+
+function openMoreMenu() { openModal('moreModal'); }
+
+function renderBtTopbar() {
+  const btn = document.getElementById('bt-topbar-btn');
+  const dot = document.getElementById('bt-dot');
+  const connected = bt.device && bt.device.gatt.connected;
+  if (dot) dot.style.cssText = `display:inline-block;width:6px;height:6px;border-radius:50%;background:${connected ? '#4caf50' : 'transparent'};margin-right:2px;vertical-align:middle`;
+  if (btn) btn.classList.toggle('active', connected);
 }
 
 // ── SW registration ──
