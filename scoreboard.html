@@ -492,6 +492,14 @@
   .btn-confirm { background: #1e88e5; color: #fff; }
   .btn-danger-confirm { background: #c62828; color: #fff; }
 
+  .setting-hint {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+    margin: -10px 0 12px;
+    line-height: 1.5;
+  }
+
   .toggle-row {
     display: flex;
     align-items: center;
@@ -896,30 +904,37 @@
       <option value="2" selected>3 局 2 勝</option>
       <option value="3">5 局 3 勝</option>
     </select>
+    <small class="setting-hint">羽球標準賽制為 3 局 2 勝；決勝局若需加賽則選 5 局 3 勝。</small>
 
     <label>每局分數上限</label>
     <input type="number" id="scoreLimit" value="21" min="5" max="99">
+    <small class="setting-hint">標準羽球每局 21 分。開啟 Deuce 時 20:20 後延伸，上限 30 分。</small>
 
     <div class="toggle-row">
       <span>平分追加（Deuce）</span>
       <button class="toggle on" id="deuceToggle" onclick="toggleDeuce()"></button>
     </div>
+    <small class="setting-hint">開啟：平分後須領先 2 分方可獲勝（最高 30 分）。關閉：達上限即獲勝。</small>
 
     <div class="toggle-row">
       <span>得分音效</span>
       <button class="toggle on" id="soundToggle" onclick="toggleSound()"></button>
     </div>
+    <small class="setting-hint">每次加分時播放提示音效。</small>
 
     <div class="toggle-row">
       <span>自動計時</span>
       <button class="toggle" id="autoTimerToggle" onclick="toggleAutoTimer()"></button>
     </div>
+    <small class="setting-hint">開啟：第一次加分時自動啟動底部計時器。</small>
 
     <label>背景主題</label>
     <div class="theme-swatches" id="themeSwatch"></div>
+    <small class="setting-hint">調整整體深淺背景風格，不影響隊伍顏色。</small>
 
     <label>快速配色方案</label>
     <div class="pair-swatches" id="pairSwatch"></div>
+    <small class="setting-hint">快速套用左右隊伍的配色組合。</small>
 
     <div class="color-row">
       <span>A 隊顏色</span>
@@ -929,6 +944,7 @@
       <span>B 隊顏色</span>
       <input type="color" id="colorB" value="#1e88e5" oninput="previewTeamColor('B', this.value)">
     </div>
+    <small class="setting-hint">自訂各隊背景顏色。按「套用」後儲存，按「關閉」還原。</small>
 
     <div class="modal-row">
       <button class="btn-cancel" onclick="cancelSettings()">關閉</button>
