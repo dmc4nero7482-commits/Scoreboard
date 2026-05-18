@@ -34,20 +34,68 @@
   /* ── Main layout ── */
   #app {
     display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    grid-template-rows: 1fr auto;
+    grid-template-rows: 48px 1fr 44px;
     height: 100dvh;
-    gap: 0;
+  }
+
+  /* ── Top bar ── */
+  #topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 6px;
+    background: var(--panel-bg);
+    border-bottom: 1px solid var(--border);
+    gap: 4px;
+    z-index: 10;
+  }
+  .topbar-group { display: flex; align-items: center; gap: 2px; }
+  .topbar-btn {
+    width: 38px; height: 38px;
+    border: none; border-radius: 8px;
+    background: transparent;
+    color: var(--text);
+    font-size: 17px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+    -webkit-tap-highlight-color: transparent;
+    flex-shrink: 0;
+  }
+  .topbar-btn:hover, .topbar-btn:active { background: #ffffff18; }
+  .topbar-btn.active { color: #4caf50; }
+  #match-title {
+    flex: 1;
+    text-align: center;
+    font-size: clamp(13px, 2.5vw, 17px);
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border: 1px solid transparent;
+    transition: border-color 0.2s;
+  }
+  #match-title:hover { border-color: var(--muted); }
+
+  /* ── Score area ── */
+  #score-area {
+    display: flex;
+    position: relative;
+    overflow: hidden;
   }
 
   /* ── Score panels ── */
   .score-panel {
+    flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 12px;
-    padding: 16px 8px;
+    gap: 10px;
     position: relative;
     transition: background 0.3s;
   }
@@ -55,11 +103,33 @@
     content: '🏸';
     position: absolute;
     top: 10px;
-    font-size: 22px;
+    font-size: 20px;
     opacity: 0.9;
   }
-  #panelA { background: color-mix(in srgb, var(--a-color) 12%, var(--bg)); border-right: 2px solid var(--border); }
-  #panelB { background: color-mix(in srgb, var(--b-color) 12%, var(--bg)); border-left: 2px solid var(--border); }
+  #panelA { background: color-mix(in srgb, var(--a-color) 28%, var(--bg)); }
+  #panelB { background: color-mix(in srgb, var(--b-color) 28%, var(--bg)); }
+
+  /* ── Set badge (center floating) ── */
+  #set-badge {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #00000077;
+    backdrop-filter: blur(6px);
+    border-radius: 20px;
+    padding: 5px 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    z-index: 5;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  .badge-sets-a { color: var(--a-color); font-weight: 900; font-size: clamp(15px, 2.5vw, 20px); }
+  .badge-cur    { color: var(--text);    font-size: clamp(11px, 1.8vw, 15px); font-weight: 600; }
+  .badge-sep    { color: var(--muted);   font-size: 11px; }
+  .badge-sets-b { color: var(--b-color); font-weight: 900; font-size: clamp(15px, 2.5vw, 20px); }
 
   .team-name {
     font-size: clamp(16px, 3vw, 28px);
@@ -128,6 +198,62 @@
   }
   .dot.won-a { background: var(--a-color); }
   .dot.won-b { background: var(--b-color); }
+
+  /* ── Theme swatches ── */
+  .theme-swatches {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  .swatch {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 3px solid transparent;
+    transition: border-color 0.15s, transform 0.1s;
+    flex-shrink: 0;
+  }
+  .swatch:hover { transform: scale(1.1); }
+  .swatch.active { border-color: #fff; }
+
+  .color-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    gap: 10px;
+  }
+  .color-row span { font-size: 14px; }
+  .color-row input[type=color] {
+    width: 44px; height: 36px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: none;
+    cursor: pointer;
+    padding: 2px;
+  }
+
+  /* color pair swatches */
+  .pair-swatches {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  .pair-swatch {
+    width: 48px; height: 32px;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    border: 3px solid transparent;
+    transition: border-color 0.15s, transform 0.1s;
+    display: flex;
+    flex-shrink: 0;
+  }
+  .pair-swatch:hover { transform: scale(1.1); }
+  .pair-swatch.active { border-color: #fff; }
+  .pair-swatch div { flex: 1; }
 
   /* ── Swipe hints ── */
   .swipe-hint {
@@ -499,10 +625,6 @@
     <div class="team-name" id="nameA" onclick="editName('A')">隊伍 A</div>
     <div class="set-dots" id="dotsA"></div>
     <div class="score-num" id="scoreA" onclick="addScore('A')">0</div>
-    <div class="score-controls">
-      <button class="btn-score btn-minus-a" onclick="addScore('A',-1)">−</button>
-      <button class="btn-score btn-plus-a"  onclick="addScore('A',+1)">+</button>
-    </div>
     <div class="swipe-hint bot">↓ −1</div>
   </div>
 
@@ -528,10 +650,6 @@
     <div class="team-name" id="nameB" onclick="editName('B')">隊伍 B</div>
     <div class="set-dots" id="dotsB"></div>
     <div class="score-num" id="scoreB" onclick="addScore('B')">0</div>
-    <div class="score-controls">
-      <button class="btn-score btn-minus-b" onclick="addScore('B',-1)">−</button>
-      <button class="btn-score btn-plus-b"  onclick="addScore('B',+1)">+</button>
-    </div>
     <div class="swipe-hint bot">↓ −1</div>
   </div>
 
@@ -631,6 +749,21 @@
     <div class="toggle-row">
       <span>自動計時</span>
       <button class="toggle" id="autoTimerToggle" onclick="toggleAutoTimer()"></button>
+    </div>
+
+    <label>背景主題</label>
+    <div class="theme-swatches" id="themeSwatch"></div>
+
+    <label>快速配色方案</label>
+    <div class="pair-swatches" id="pairSwatch"></div>
+
+    <div class="color-row">
+      <span>A 隊顏色</span>
+      <input type="color" id="colorA" value="#e53935" oninput="previewTeamColor('A', this.value)">
+    </div>
+    <div class="color-row">
+      <span>B 隊顏色</span>
+      <input type="color" id="colorB" value="#1e88e5" oninput="previewTeamColor('B', this.value)">
     </div>
 
     <div class="modal-row">
@@ -964,11 +1097,19 @@ function openSettings() {
   setToggleUI('deuceToggle', s.deuce);
   setToggleUI('soundToggle', s.sound);
   setToggleUI('autoTimerToggle', s.autoTimer);
+  // Sync color pickers to current CSS vars
+  const ca = getComputedStyle(document.documentElement).getPropertyValue('--a-color').trim();
+  const cb = getComputedStyle(document.documentElement).getPropertyValue('--b-color').trim();
+  document.getElementById('colorA').value = ca.length === 7 ? ca : '#e53935';
+  document.getElementById('colorB').value = cb.length === 7 ? cb : '#1e88e5';
+  renderThemeSwatches();
+  renderPairSwatches();
   openModal('settingsModal');
 }
 function saveSettings() {
   state.settings.setsToWin = parseInt(document.getElementById('setsToWin').value);
   state.settings.scoreLimit = parseInt(document.getElementById('scoreLimit').value) || 21;
+  saveTheme();
   closeModal('settingsModal');
   save();
 }
@@ -1052,6 +1193,103 @@ function load() {
       if (state.timerInterval) clearInterval(state.timerInterval);
     }
   } catch(e) {}
+}
+
+// ── Themes ──
+const COLOR_PAIRS = [
+  { a: '#e53935', b: '#1e88e5', label: '紅藍' },
+  { a: '#f06292', b: '#64b5f6', label: '粉紅淺藍' },
+  { a: '#e91e63', b: '#29b6f6', label: '桃紅天藍' },
+  { a: '#c0392b', b: '#2980b9', label: '深紅深藍' },
+  { a: '#388e3c', b: '#7b1a1a', label: '綠深紅' },
+  { a: '#7e57c2', b: '#66bb6a', label: '紫綠' },
+  { a: '#ff7043', b: '#26a69a', label: '橙青' },
+  { a: '#fdd835', b: '#1565c0', label: '黃深藍' },
+  { a: '#ab47bc', b: '#ef5350', label: '紫紅' },
+  { a: '#ffffff', b: '#ffffff', label: '自訂', custom: true },
+];
+
+let currentPair = 0;
+
+function applyColorPair(idx) {
+  const pair = COLOR_PAIRS[idx];
+  if (pair.custom) return;
+  currentPair = idx;
+  document.documentElement.style.setProperty('--a-color', pair.a);
+  document.documentElement.style.setProperty('--b-color', pair.b);
+  document.getElementById('colorA').value = pair.a;
+  document.getElementById('colorB').value = pair.b;
+  renderPairSwatches();
+}
+
+function renderPairSwatches() {
+  const wrap = document.getElementById('pairSwatch');
+  if (!wrap) return;
+  const ca = getComputedStyle(document.documentElement).getPropertyValue('--a-color').trim();
+  const cb = getComputedStyle(document.documentElement).getPropertyValue('--b-color').trim();
+  wrap.innerHTML = COLOR_PAIRS.map((p, i) => {
+    if (p.custom) return '';
+    const active = p.a === ca && p.b === cb;
+    return `<div class="pair-swatch ${active ? 'active' : ''}" title="${p.label}" onclick="applyColorPair(${i})">
+      <div style="background:${p.a}"></div>
+      <div style="background:${p.b}"></div>
+    </div>`;
+  }).join('');
+}
+
+const THEMES = [
+  { id: 'dark',   label: '深藍',   bg: '#0d1b2a', panel: '#112240', border: '#1e3a5f', text: '#e0e6f0', muted: '#8899aa' },
+  { id: 'black',  label: '純黑',   bg: '#000000', panel: '#111111', border: '#2a2a2a', text: '#ffffff',  muted: '#666666' },
+  { id: 'court',  label: '球場綠', bg: '#0f2a0f', panel: '#1a3d1a', border: '#2d5a2d', text: '#e8f5e9', muted: '#81c784' },
+  { id: 'navy',   label: '深海',   bg: '#050d1a', panel: '#0a1628', border: '#102040', text: '#cce0ff',  muted: '#5588bb' },
+  { id: 'purple', label: '夜紫',   bg: '#1a0a2e', panel: '#2d1b4e', border: '#4a2d7a', text: '#ede0ff', muted: '#9c7fcc' },
+  { id: 'light',  label: '淺色',   bg: '#f0f4f8', panel: '#ffffff', border: '#d0d8e4', text: '#1a2744', muted: '#607d9a' },
+];
+
+let currentTheme = 'dark';
+
+function applyTheme(id) {
+  const t = THEMES.find(t => t.id === id) || THEMES[0];
+  currentTheme = t.id;
+  const r = document.documentElement.style;
+  r.setProperty('--bg', t.bg);
+  r.setProperty('--panel-bg', t.panel);
+  r.setProperty('--border', t.border);
+  r.setProperty('--text', t.text);
+  r.setProperty('--muted', t.muted);
+  document.querySelector('meta[name="theme-color"]').content = t.panel;
+}
+
+function previewTeamColor(side, val) {
+  document.documentElement.style.setProperty(
+    side === 'A' ? '--a-color' : '--b-color', val
+  );
+}
+
+function renderThemeSwatches() {
+  const wrap = document.getElementById('themeSwatch');
+  if (!wrap) return;
+  wrap.innerHTML = THEMES.map(t =>
+    `<div class="swatch ${t.id === currentTheme ? 'active' : ''}"
+          style="background:${t.bg};box-shadow:inset 0 0 0 1px ${t.border}"
+          title="${t.label}"
+          onclick="applyTheme('${t.id}');renderThemeSwatches()"></div>`
+  ).join('');
+}
+
+function loadTheme() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('sbTheme') || '{}');
+    if (saved.theme) applyTheme(saved.theme);
+    if (saved.colorA) { document.documentElement.style.setProperty('--a-color', saved.colorA); }
+    if (saved.colorB) { document.documentElement.style.setProperty('--b-color', saved.colorB); }
+  } catch(e) {}
+}
+
+function saveTheme() {
+  const colorA = getComputedStyle(document.documentElement).getPropertyValue('--a-color').trim();
+  const colorB = getComputedStyle(document.documentElement).getPropertyValue('--b-color').trim();
+  try { localStorage.setItem('sbTheme', JSON.stringify({ theme: currentTheme, colorA, colorB })); } catch(e) {}
 }
 
 // ── Swipe gestures ──
@@ -1383,6 +1621,7 @@ if (_remoteCode) {
 } else {
   load();
   loadBtMapping();
+  loadTheme();
   render();
   renderTimer();
   renderBtStatus();
