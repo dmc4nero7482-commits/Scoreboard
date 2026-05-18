@@ -462,6 +462,17 @@
     min-width: 280px;
     max-width: 420px;
     width: 90%;
+    max-height: 85dvh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  .modal .modal-row:last-child {
+    position: sticky;
+    bottom: 0;
+    background: var(--panel-bg);
+    padding-top: 10px;
+    margin-top: auto;
   }
   .modal h3 { margin-bottom: 16px; font-size: 18px; }
   .modal label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
@@ -813,7 +824,7 @@
     </div>
 
     <div class="modal-row">
-      <button class="btn-cancel" onclick="closeModal('settingsModal')">關閉</button>
+      <button class="btn-cancel" onclick="cancelSettings()">關閉</button>
       <button class="btn-confirm" onclick="saveSettings()">套用</button>
     </div>
   </div>
@@ -957,6 +968,7 @@ let state = {
 let timerInterval = null;
 let editingTeam = null;
 let audioCtx = null;
+let _savedColors = null;
 
 // ── Audio ──
 function getAudioCtx() {
@@ -1171,6 +1183,12 @@ document.getElementById('nameInput').addEventListener('keydown', e => { if (e.ke
 
 // ── Settings ──
 function openSettings() {
+  const cs = getComputedStyle(document.documentElement);
+  _savedColors = {
+    a: cs.getPropertyValue('--a-color').trim(),
+    b: cs.getPropertyValue('--b-color').trim(),
+    theme: currentTheme,
+  };
   const s = state.settings;
   document.getElementById('setsToWin').value = s.setsToWin;
   document.getElementById('scoreLimit').value = s.scoreLimit;
@@ -1190,8 +1208,18 @@ function saveSettings() {
   state.settings.setsToWin = parseInt(document.getElementById('setsToWin').value);
   state.settings.scoreLimit = parseInt(document.getElementById('scoreLimit').value) || 21;
   saveTheme();
+  _savedColors = null;
   closeModal('settingsModal');
   save();
+}
+function cancelSettings() {
+  if (_savedColors) {
+    if (_savedColors.theme !== currentTheme) applyTheme(_savedColors.theme);
+    document.documentElement.style.setProperty('--a-color', _savedColors.a);
+    document.documentElement.style.setProperty('--b-color', _savedColors.b);
+    _savedColors = null;
+  }
+  closeModal('settingsModal');
 }
 function toggleDeuce()      { state.settings.deuce = !state.settings.deuce; setToggleUI('deuceToggle', state.settings.deuce); }
 function toggleSound()      { state.settings.sound = !state.settings.sound; setToggleUI('soundToggle', state.settings.sound); }
@@ -1226,7 +1254,11 @@ function render() {
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
-  overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(overlay.id); });
+  overlay.addEventListener('click', e => {
+    if (e.target !== overlay) return;
+    if (overlay.id === 'settingsModal') cancelSettings();
+    else closeModal(overlay.id);
+  });
 });
 function setToggleUI(id, on) {
   document.getElementById(id).classList.toggle('on', on);
@@ -1684,6 +1716,12 @@ function saveMatchTitle() {
 }
 document.getElementById('matchTitleInput')?.addEventListener('keydown', e => {
   if (e.key === 'Enter') saveMatchTitle();
+});
+document.getElementById('scoreLimit').addEventListener('keydown', e => {
+  if (e.key === 'Enter') saveSettings();
+});
+document.getElementById('setsToWin').addEventListener('keydown', e => {
+  if (e.key === 'Enter') saveSettings();
 });
 
 function openMoreMenu() { openModal('moreModal'); }
