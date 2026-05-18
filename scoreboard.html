@@ -756,10 +756,16 @@
       <button class="topbar-btn" onclick="confirmReset()" title="重置">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
       </button>
+      <button class="topbar-btn" onclick="prevSet()" title="上一局">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+      </button>
     </div>
     <div class="tb-center" id="match-title" onclick="editMatchName()">New Game</div>
     <div class="tb-wing tb-right">
       <button class="topbar-btn" id="timer-topbar-btn" onclick="toggleTimer()" title="計時">▶</button>
+      <button class="topbar-btn" onclick="nextSet()" title="下一局">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z"/></svg>
+      </button>
       <button class="topbar-btn" onclick="openMoreMenu()" title="更多" style="font-size:20px;letter-spacing:-1px">···</button>
     </div>
     <!-- hidden BT references used by JS status updates -->
@@ -997,8 +1003,7 @@
   <div class="modal" style="max-width:300px">
     <h3>操作</h3>
     <div style="display:flex;flex-direction:column;gap:8px">
-      <button class="btn-confirm" onclick="closeModal('moreModal');nextSet()" style="text-align:left;padding:12px 16px">⏭ 下一局</button>
-      <button class="btn-cancel"  onclick="closeModal('moreModal');openBtModal()"  style="text-align:left;padding:12px 16px">
+<button class="btn-cancel"  onclick="closeModal('moreModal');openBtModal()"  style="text-align:left;padding:12px 16px">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:6px"><path d="M17.71 7.71L12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29 4.3-4.29zM13 5.83l1.88 1.88L13 9.59V5.83zm1.88 10.46L13 18.17v-3.76l1.88 1.88z"/></svg>藍牙遙控
       </button>
       <button class="btn-cancel"  onclick="closeModal('moreModal');openNetModal()" style="text-align:left;padding:12px 16px">
@@ -1310,6 +1315,23 @@ function undoLast() {
   state.scoreB = last.b;
   beep(440, 60, 0.2);
   removeLastHistItem();
+  render();
+  save();
+}
+
+// ── Prev set ──
+function prevSet() {
+  if (!state.setHistory.length) return;
+  const last = state.setHistory.pop();
+  const winnerWasA = last.a >= last.b;
+  if (winnerWasA) state.setsA = Math.max(0, state.setsA - 1);
+  else state.setsB = Math.max(0, state.setsB - 1);
+  state.scoreA = last.a;
+  state.scoreB = last.b;
+  state.currentSet = Math.max(1, state.currentSet - 1);
+  state.history = [];
+  clearHistBar();
+  resetTimer();
   render();
   save();
 }
