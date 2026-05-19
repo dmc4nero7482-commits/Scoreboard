@@ -41,59 +41,58 @@
     position: relative;
   }
 
-  /* ── Top bar (floating center tab) ── */
+  /* ── Top bar (floating compact pill) ── */
   #topbar {
     position: absolute;
-    top: 0;
+    top: 5px;
     left: 50%;
     transform: translateX(-50%);
     display: flex;
-    align-items: stretch;
+    align-items: center;
     z-index: 15;
-    height: 50px;
+    height: 46px;
+    background: rgba(6, 16, 36, 0.78);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.12);
+    padding: 0 4px;
+    gap: 1px;
+    white-space: nowrap;
   }
   .tb-wing {
     display: flex;
     align-items: center;
+    gap: 1px;
+    padding: 0 2px;
   }
-  .tb-left {
-    flex: 1;
-    justify-content: flex-end;
-    background: var(--a-color);
-    clip-path: polygon(0 0, 100% 0, calc(100% - 22px) 100%, 0 100%);
-    padding: 0 26px 0 4px;
-  }
-  .tb-right {
-    flex: 1;
-    justify-content: flex-start;
-    background: var(--b-color);
-    clip-path: polygon(22px 0, 100% 0, 100% 100%, 0 100%);
-    padding: 0 4px 0 26px;
-  }
+  .tb-left {}
+  .tb-right {}
   .tb-center {
-    background: var(--panel-bg);
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0 14px;
-    min-width: 90px;
-    max-width: 150px;
+    padding: 0 10px;
+    min-width: 72px;
+    max-width: 140px;
     font-size: 14px;
     font-weight: 600;
-    color: var(--text);
+    color: rgba(255,255,255,0.92);
     cursor: pointer;
     user-select: none;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    background: rgba(255,255,255,0.07);
+    border-radius: 8px;
+    align-self: center;
+    height: 34px;
   }
-  .tb-wing .topbar-btn { color: rgba(255,255,255,0.92); }
-  .tb-wing .topbar-btn:hover, .tb-wing .topbar-btn:active { background: rgba(255,255,255,0.18); }
   .topbar-btn {
-    width: 38px; height: 38px;
+    width: 36px; height: 36px;
     border: none; border-radius: 8px;
-    background: transparent;
-    color: var(--text);
+    background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.88);
     font-size: 17px;
     cursor: pointer;
     display: flex; align-items: center; justify-content: center;
@@ -101,12 +100,12 @@
     -webkit-tap-highlight-color: transparent;
     flex-shrink: 0;
   }
-  .topbar-btn:hover, .topbar-btn:active { background: #ffffff18; }
+  .topbar-btn:hover, .topbar-btn:active { background: rgba(255,255,255,0.22); }
   .topbar-btn.active { color: #4caf50; }
   .topbar-btn.danger-btn { color: #ef9a9a; }
-  .topbar-btn.danger-btn:hover { background: #3b1010; }
+  .topbar-btn.danger-btn:hover { background: rgba(180,30,30,0.35); }
   #match-title {
-    flex: 0 0 auto;
+    flex: 1;
     text-align: center;
     font-size: clamp(13px, 2.5vw, 17px);
     font-weight: 600;
@@ -144,8 +143,8 @@
   .score-panel.serving::before {
     content: '🏸';
     position: absolute;
-    top: 10px;
-    font-size: 20px;
+    top: 62px;
+    font-size: 22px;
     opacity: 0.9;
   }
   #panelA { background: var(--a-color); }
@@ -154,7 +153,7 @@
   /* ── Set badge (center floating) ── */
   #set-badge {
     position: absolute;
-    top: 52px;
+    top: 58px;
     left: 50%;
     transform: translateX(-50%);
     background: #00000077;
@@ -586,8 +585,22 @@
     transition: filter 0.1s;
     -webkit-tap-highlight-color: transparent;
     user-select: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
   }
   .rem-score-btn:active { filter: brightness(1.4); }
+  .rem-team-label {
+    font-size: 0.26em;
+    opacity: 0.6;
+    line-height: 1;
+    letter-spacing: 2px;
+  }
+  .rem-score-num {
+    line-height: 0.9;
+  }
   #rem-a { background: color-mix(in srgb, var(--a-color) 20%, var(--bg)); color: var(--a-color); }
   #rem-b { background: color-mix(in srgb, var(--b-color) 20%, var(--bg)); color: var(--b-color); }
 
@@ -600,6 +613,13 @@
     background: var(--panel-bg);
     border-left: 1px solid var(--border);
     border-right: 1px solid var(--border);
+  }
+  #rem-set-info {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+    line-height: 1.5;
+    padding: 0 4px;
   }
   .rem-ctrl-btn {
     width: 56px; height: 56px;
@@ -874,12 +894,19 @@
     <div style="font-size:11px;color:var(--muted)">遙控器</div>
   </div>
   <div id="remote-body">
-    <button class="rem-score-btn" id="rem-a" onclick="sendRemoteCmd('scoreA')">A</button>
+    <button class="rem-score-btn" id="rem-a" onclick="sendRemoteCmd('scoreA')">
+      <span class="rem-team-label">A</span>
+      <span class="rem-score-num" id="rem-score-a">—</span>
+    </button>
     <div id="rem-center">
+      <div id="rem-set-info"></div>
       <button class="rem-ctrl-btn" onclick="sendRemoteCmd('undo')" title="復原">↩</button>
       <button class="rem-ctrl-btn" onclick="sendRemoteCmd('timer')" title="計時">⏱</button>
     </div>
-    <button class="rem-score-btn" id="rem-b" onclick="sendRemoteCmd('scoreB')">B</button>
+    <button class="rem-score-btn" id="rem-b" onclick="sendRemoteCmd('scoreB')">
+      <span class="rem-team-label">B</span>
+      <span class="rem-score-num" id="rem-score-b">—</span>
+    </button>
   </div>
   <div id="remote-hint">點左右大按鈕計分　↩ 復原　⏱ 計時</div>
 </div>
@@ -1657,6 +1684,7 @@ function startNetHost() {
   netPeer.on('connection', conn => {
     netRemoteConns.push(conn);
     updateNetConnCount();
+    conn.on('open', () => broadcastState());
     conn.on('data', cmd => handleNetCmd(cmd));
     conn.on('close', () => {
       netRemoteConns = netRemoteConns.filter(c => c !== conn);
@@ -1706,6 +1734,20 @@ function handleNetCmd(cmd) {
   else if (cmd === 'scoreB') addScore('B');
   else if (cmd === 'undo') undoLast();
   else if (cmd === 'timer') toggleTimer();
+  broadcastState();
+}
+
+function broadcastState() {
+  if (!netRemoteConns.length) return;
+  const payload = {
+    type: 'state',
+    scoreA: state.scoreA,
+    scoreB: state.scoreB,
+    currentSet: state.currentSet,
+    setsA: state.setsA,
+    setsB: state.setsB
+  };
+  netRemoteConns.forEach(conn => { if (conn.open) conn.send(payload); });
 }
 
 function openNetModal() {
@@ -1729,6 +1771,14 @@ function initRemoteMode(code) {
     netHostConn.on('open', () => setRemoteStatus('ok', '已連線'));
     netHostConn.on('close', () => setRemoteStatus('err', '已斷線'));
     netHostConn.on('error', () => setRemoteStatus('err', '連線失敗'));
+    netHostConn.on('data', data => {
+      if (data && data.type === 'state') {
+        document.getElementById('rem-score-a').textContent = data.scoreA;
+        document.getElementById('rem-score-b').textContent = data.scoreB;
+        const setInfo = document.getElementById('rem-set-info');
+        setInfo.innerHTML = `第${data.currentSet}局<br>${data.setsA} : ${data.setsB}`;
+      }
+    });
   });
   netPeer.on('error', () => setRemoteStatus('err', '無法連線，請確認房間碼'));
 }
