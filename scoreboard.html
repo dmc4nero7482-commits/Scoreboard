@@ -582,14 +582,14 @@
     font-size: clamp(60px, 20vw, 120px);
     font-weight: 900;
     cursor: pointer;
-    transition: filter 0.1s;
-    -webkit-tap-highlight-color: transparent;
     user-select: none;
+    -webkit-tap-highlight-color: transparent;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 2px;
+    transition: filter 0.1s;
   }
   .rem-score-btn:active { filter: brightness(1.4); }
   .rem-team-label {
@@ -601,8 +601,27 @@
   .rem-score-num {
     line-height: 0.9;
   }
+  .rem-panel {
+    display: flex;
+    flex-direction: column;
+  }
+  .rem-panel .rem-score-btn { flex: 1; }
   #rem-a { background: color-mix(in srgb, var(--a-color) 20%, var(--bg)); color: var(--a-color); }
   #rem-b { background: color-mix(in srgb, var(--b-color) 20%, var(--bg)); color: var(--b-color); }
+  .rem-deduct-btn {
+    padding: 16px;
+    font-size: 20px;
+    font-weight: 800;
+    border: none;
+    background: rgba(0,0,0,0.32);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    letter-spacing: 1px;
+  }
+  .rem-deduct-btn:active { background: rgba(0,0,0,0.55); }
+  .rem-panel-a .rem-deduct-btn { color: var(--a-color); }
+  .rem-panel-b .rem-deduct-btn { color: var(--b-color); }
 
   #rem-center {
     display: flex;
@@ -894,19 +913,25 @@
     <div style="font-size:11px;color:var(--muted)">遙控器</div>
   </div>
   <div id="remote-body">
-    <button class="rem-score-btn" id="rem-a" onclick="sendRemoteCmd('scoreA')">
-      <span class="rem-team-label">A</span>
-      <span class="rem-score-num" id="rem-score-a">—</span>
-    </button>
+    <div class="rem-panel rem-panel-a">
+      <button class="rem-score-btn" id="rem-a" onclick="sendRemoteCmd('scoreA')">
+        <span class="rem-team-label">A</span>
+        <span class="rem-score-num" id="rem-score-a">—</span>
+      </button>
+      <button class="rem-deduct-btn" onclick="sendRemoteCmd('unscoreA')">−1</button>
+    </div>
     <div id="rem-center">
       <div id="rem-set-info"></div>
       <button class="rem-ctrl-btn" onclick="sendRemoteCmd('undo')" title="復原">↩</button>
       <button class="rem-ctrl-btn" onclick="sendRemoteCmd('timer')" title="計時">⏱</button>
     </div>
-    <button class="rem-score-btn" id="rem-b" onclick="sendRemoteCmd('scoreB')">
-      <span class="rem-team-label">B</span>
-      <span class="rem-score-num" id="rem-score-b">—</span>
-    </button>
+    <div class="rem-panel rem-panel-b">
+      <button class="rem-score-btn" id="rem-b" onclick="sendRemoteCmd('scoreB')">
+        <span class="rem-team-label">B</span>
+        <span class="rem-score-num" id="rem-score-b">—</span>
+      </button>
+      <button class="rem-deduct-btn" onclick="sendRemoteCmd('unscoreB')">−1</button>
+    </div>
   </div>
   <div id="remote-hint">點左右大按鈕計分　↩ 復原　⏱ 計時</div>
 </div>
@@ -1732,6 +1757,8 @@ function updateNetConnCount() {
 function handleNetCmd(cmd) {
   if (cmd === 'scoreA') addScore('A');
   else if (cmd === 'scoreB') addScore('B');
+  else if (cmd === 'unscoreA') addScore('A', -1);
+  else if (cmd === 'unscoreB') addScore('B', -1);
   else if (cmd === 'undo') undoLast();
   else if (cmd === 'timer') toggleTimer();
   broadcastState();
@@ -1793,13 +1820,7 @@ function setRemoteStatus(type, msg) {
 function sendRemoteCmd(cmd) {
   if (netHostConn && netHostConn.open) {
     netHostConn.send(cmd);
-    beep(cmd === 'scoreA' ? 660 : cmd === 'scoreB' ? 880 : 440, 60, 0.2);
-    const btnId = cmd === 'scoreA' ? 'rem-a' : cmd === 'scoreB' ? 'rem-b' : null;
-    if (btnId) {
-      const el = document.getElementById(btnId);
-      el.style.filter = 'brightness(1.5)';
-      setTimeout(() => el.style.filter = '', 120);
-    }
+    beep(cmd === 'unscoreA' || cmd === 'unscoreB' ? 330 : 440, 60, 0.2);
   } else {
     setRemoteStatus('err', '未連線');
   }
