@@ -1194,6 +1194,16 @@
             <td><button class="btn-learn" id="learn-scoreB" onclick="startLearn('scoreB')">學習</button></td>
           </tr>
           <tr>
+            <td>A 隊 −1</td>
+            <td id="map-label-unscoreA">--</td>
+            <td><button class="btn-learn" id="learn-unscoreA" onclick="startLearn('unscoreA')">學習</button></td>
+          </tr>
+          <tr>
+            <td>B 隊 −1</td>
+            <td id="map-label-unscoreB">--</td>
+            <td><button class="btn-learn" id="learn-unscoreB" onclick="startLearn('unscoreB')">學習</button></td>
+          </tr>
+          <tr>
             <td>復原</td>
             <td id="map-label-undo">--</td>
             <td><button class="btn-learn" id="learn-undo" onclick="startLearn('undo')">學習</button></td>
@@ -1913,6 +1923,8 @@ function handleBtNotification(event) {
   const action = bt.mapping[key];
   if (action === 'scoreA') addScore('A');
   else if (action === 'scoreB') addScore('B');
+  else if (action === 'unscoreA') addScore('A', -1);
+  else if (action === 'unscoreB') addScore('B', -1);
   else if (action === 'undo') undoLast();
   else if (action === 'timer') toggleTimer();
 }
