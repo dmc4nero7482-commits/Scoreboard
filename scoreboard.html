@@ -867,6 +867,7 @@
     <!-- Team A -->
     <div class="score-panel serving" id="panelA">
       <div class="swipe-flash" id="flashA" style="background:var(--a-color)"></div>
+      <div class="team-name" id="nameA" onclick="editName('A')">隊伍 A</div>
       <div class="score-num" id="scoreA" onclick="addScore('A')">0</div>
       <button class="btn-deduct" onclick="addScore('A', -1)">−1</button>
     </div>
@@ -883,6 +884,7 @@
     <!-- Team B -->
     <div class="score-panel" id="panelB">
       <div class="swipe-flash" id="flashB" style="background:var(--b-color)"></div>
+      <div class="team-name" id="nameB" onclick="editName('B')">隊伍 B</div>
       <div class="score-num" id="scoreB" onclick="addScore('B')">0</div>
       <button class="btn-deduct" onclick="addScore('B', -1)">−1</button>
     </div>
@@ -1705,6 +1707,8 @@ function render() {
   document.getElementById('setsA').textContent = state.setsA;
   document.getElementById('setsB').textContent = state.setsB;
   document.getElementById('set-label').textContent = `第${state.currentSet}局`;
+  document.getElementById('nameA').textContent = state.nameA;
+  document.getElementById('nameB').textContent = state.nameB;
 
   document.getElementById('panelA').classList.toggle('serving', state.serving === 'A');
   document.getElementById('panelB').classList.toggle('serving', state.serving === 'B');
