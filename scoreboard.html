@@ -171,17 +171,25 @@
   .badge-sets-b { color: var(--b-color); font-weight: 900; font-size: clamp(15px, 2.5vw, 20px); }
 
   .team-name {
-    font-size: clamp(16px, 3vw, 28px);
+    position: absolute;
+    top: 68px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: clamp(14px, 2.5vw, 22px);
     font-weight: 700;
     letter-spacing: 1px;
     cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: border-color 0.2s;
-    text-align: center;
-    min-width: 80px;
+    color: rgba(255,255,255,0.88);
+    z-index: 3;
+    padding: 6px 18px;
+    border-radius: 20px;
+    background: rgba(0,0,0,0.22);
+    white-space: nowrap;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s;
   }
-  .team-name:hover { border-color: rgba(255,255,255,0.5); }
-  #nameA, #nameB { color: rgba(255,255,255,0.9); }
+  .team-name:hover, .team-name:active { background: rgba(0,0,0,0.42); }
 
   .score-num {
     font-family: 'Chakra Petch', sans-serif;
@@ -1067,7 +1075,7 @@
 </div>
 
 <!-- Name edit modal -->
-<div class="modal-overlay" id="nameModal">
+<div class="modal-overlay" id="nameModal" style="align-items:flex-start;padding-top:16px">
   <div class="modal">
     <h3>修改隊伍名稱</h3>
     <label>名稱</label>
