@@ -138,13 +138,6 @@
     transition: background 0.3s;
     padding-top: 0;
   }
-  .score-panel.serving::before {
-    content: '🏸';
-    position: absolute;
-    top: 54px;
-    font-size: 22px;
-    opacity: 0.9;
-  }
   #panelA { background: var(--a-color); }
   #panelB { background: var(--b-color); }
 
@@ -172,7 +165,7 @@
 
   .team-name {
     position: absolute;
-    top: 82px;
+    top: 68px;
     left: 50%;
     transform: translateX(-50%);
     font-size: clamp(14px, 2.5vw, 22px);
@@ -1715,8 +1708,8 @@ function render() {
   document.getElementById('setsA').textContent = state.setsA;
   document.getElementById('setsB').textContent = state.setsB;
   document.getElementById('set-label').textContent = `第${state.currentSet}局`;
-  document.getElementById('nameA').textContent = state.nameA;
-  document.getElementById('nameB').textContent = state.nameB;
+  document.getElementById('nameA').textContent = (state.serving === 'A' ? '🏸 ' : '') + state.nameA;
+  document.getElementById('nameB').textContent = (state.serving === 'B' ? '🏸 ' : '') + state.nameB;
 
   document.getElementById('panelA').classList.toggle('serving', state.serving === 'A');
   document.getElementById('panelB').classList.toggle('serving', state.serving === 'B');
