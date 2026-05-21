@@ -1,0 +1,18 @@
+{
+  "name": "羽球計分板",
+  "short_name": "羽球計分",
+  "description": "羽毛球比賽即時計分板",
+  "start_url": "./scoreboard.html",
+  "display": "standalone",
+  "orientation": "landscape",
+  "theme_color": "#1565c0",
+  "background_color": "#0d1b2a",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
