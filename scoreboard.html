@@ -1070,6 +1070,11 @@
     <h3>修改隊伍名稱</h3>
     <label>名稱</label>
     <input type="text" id="nameInput" maxlength="20" placeholder="隊伍名稱">
+    <div style="margin-top:10px">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">常用球員</div>
+      <div id="player-chips" style="display:flex;flex-wrap:wrap;gap:6px;max-height:110px;overflow-y:auto;min-height:28px"></div>
+      <button onclick="addToPlayerList()" style="margin-top:8px;font-size:12px;color:var(--muted);background:transparent;border:1px dashed var(--muted);padding:4px 12px;border-radius:12px;cursor:pointer;width:100%">＋ 將目前名稱加入常用</button>
+    </div>
     <div class="modal-row">
       <button class="btn-cancel" onclick="closeModal('nameModal')">取消</button>
       <button class="btn-confirm" onclick="saveName()">確認</button>
@@ -1576,10 +1581,58 @@ function resetMatch() {
   save();
 }
 
+// ── Player list ──
+function getPlayerList() {
+  return JSON.parse(localStorage.getItem('sb-players') || '[]');
+}
+function renderPlayerChips() {
+  const chips = document.getElementById('player-chips');
+  const list = getPlayerList();
+  chips.innerHTML = '';
+  if (!list.length) {
+    const empty = document.createElement('span');
+    empty.style.cssText = 'font-size:12px;color:var(--muted)';
+    empty.textContent = '尚無常用球員';
+    chips.appendChild(empty);
+    return;
+  }
+  list.forEach((name, i) => {
+    const chip = document.createElement('div');
+    chip.style.cssText = 'display:flex;align-items:center;background:rgba(255,255,255,0.12);border-radius:14px;padding:4px 10px;gap:6px;cursor:pointer';
+    const label = document.createElement('span');
+    label.style.cssText = 'font-size:13px';
+    label.textContent = name;
+    label.onclick = () => { document.getElementById('nameInput').value = name; };
+    const del = document.createElement('span');
+    del.style.cssText = 'font-size:11px;color:var(--muted);padding:0 2px';
+    del.textContent = '✕';
+    del.onclick = (e) => { e.stopPropagation(); removePlayer(i); };
+    chip.appendChild(label);
+    chip.appendChild(del);
+    chips.appendChild(chip);
+  });
+}
+function addToPlayerList() {
+  const name = document.getElementById('nameInput').value.trim();
+  if (!name) return;
+  const list = getPlayerList();
+  if (list.includes(name)) return;
+  list.push(name);
+  localStorage.setItem('sb-players', JSON.stringify(list));
+  renderPlayerChips();
+}
+function removePlayer(i) {
+  const list = getPlayerList();
+  list.splice(i, 1);
+  localStorage.setItem('sb-players', JSON.stringify(list));
+  renderPlayerChips();
+}
+
 // ── Name edit ──
 function editName(team) {
   editingTeam = team;
   document.getElementById('nameInput').value = state['name' + team];
+  renderPlayerChips();
   openModal('nameModal');
   setTimeout(() => document.getElementById('nameInput').focus(), 100);
 }
