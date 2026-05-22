@@ -1973,7 +1973,11 @@ function updateNetConnCount() {
 }
 
 function handleNetCmd(cmd) {
-  if (cmd === 'scoreA') addScore('A');
+  if (typeof cmd === 'object' && cmd.type === 'setNames') {
+    if (cmd.nameA) state.nameA = cmd.nameA;
+    if (cmd.nameB) state.nameB = cmd.nameB;
+    render(); save();
+  } else if (cmd === 'scoreA') addScore('A');
   else if (cmd === 'scoreB') addScore('B');
   else if (cmd === 'unscoreA') addScore('A', -1);
   else if (cmd === 'unscoreB') addScore('B', -1);
@@ -2019,7 +2023,12 @@ function initRemoteMode(code) {
   netPeer = new Peer();
   netPeer.on('open', () => {
     netHostConn = netPeer.connect(PEER_PREFIX + code, { reliable: true });
-    netHostConn.on('open', () => setRemoteStatus('ok', '已連線'));
+    netHostConn.on('open', () => {
+      setRemoteStatus('ok', '已連線');
+      if (state.nameA !== '隊伍 A' || state.nameB !== '隊伍 B') {
+        netHostConn.send({ type: 'setNames', nameA: state.nameA, nameB: state.nameB });
+      }
+    });
     netHostConn.on('close', () => setRemoteStatus('err', '已斷線'));
     netHostConn.on('error', () => setRemoteStatus('err', '連線失敗'));
     netHostConn.on('data', data => {
@@ -2426,6 +2435,9 @@ function joinViewerMode() {
 function applyExternalTeamNames(teamA, teamB) {
   if (teamA) state.nameA = teamA;
   if (teamB) state.nameB = teamB;
+  if (isRemoteMode && netHostConn && netHostConn.open) {
+    netHostConn.send({ type: 'setNames', nameA: state.nameA, nameB: state.nameB });
+  }
   render();
 }
 
