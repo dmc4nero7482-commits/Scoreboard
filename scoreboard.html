@@ -965,7 +965,7 @@
   <div id="remote-body">
     <div class="rem-panel rem-panel-a">
       <button class="rem-score-btn" id="rem-a" onclick="sendRemoteCmd('scoreA')">
-        <span class="rem-team-label">A</span>
+        <span class="rem-team-label" id="rem-name-a">A</span>
         <span class="rem-score-num" id="rem-score-a">—</span>
       </button>
       <button class="rem-deduct-btn" onclick="sendRemoteCmd('unscoreA')">−1</button>
@@ -981,7 +981,7 @@
     </div>
     <div class="rem-panel rem-panel-b">
       <button class="rem-score-btn" id="rem-b" onclick="sendRemoteCmd('scoreB')">
-        <span class="rem-team-label">B</span>
+        <span class="rem-team-label" id="rem-name-b">B</span>
         <span class="rem-score-num" id="rem-score-b">—</span>
       </button>
       <button class="rem-deduct-btn" onclick="sendRemoteCmd('unscoreB')">−1</button>
@@ -2035,6 +2035,8 @@ function initRemoteMode(code) {
       if (data && data.type === 'state') {
         document.getElementById('rem-score-a').textContent = data.scoreA;
         document.getElementById('rem-score-b').textContent = data.scoreB;
+        if (data.nameA) document.getElementById('rem-name-a').textContent = data.nameA;
+        if (data.nameB) document.getElementById('rem-name-b').textContent = data.nameB;
         const setInfo = document.getElementById('rem-set-info');
         setInfo.innerHTML = `第${data.currentSet}局<br>${data.setsA} : ${data.setsB}`;
         const timerBtn = document.getElementById('rem-timer-btn');
@@ -2488,7 +2490,7 @@ function _updateViewer(d) {
 }
 
 // ── App update check ──────────────────────────────────────
-const APP_VERSION = '1.0.2';
+const APP_VERSION = '1.0.3';
 const VERSION_URL = 'https://dmc4nero7482-commits.github.io/Scoreboard/version.json';
 
 function isNewerVersion(serverVer, currentVer) {
