@@ -11,7 +11,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@700&display=swap">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="barcode-scanner.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -2443,29 +2442,17 @@ function copyViewerUrl() {
   }).catch(() => {});
 }
 
-async function scanQRCode(inputId, codeParam) {
-  if (!window.capacitorBarcodeScanner || !window.Capacitor || !window.Capacitor.isNativePlatform()) {
+function scanQRCode(inputId, codeParam) {
+  if (window.AndroidQR) {
+    window.AndroidQR.startScan(inputId, codeParam);
+  } else {
     alert('QR 掃描僅支援 App 版本');
-    return;
   }
-  try {
-    const { BarcodeScanner } = window.capacitorBarcodeScanner;
-    const perms = await BarcodeScanner.requestPermissions();
-    if (perms.camera !== 'granted') {
-      alert('需要相機權限才能掃描 QR Code');
-      return;
-    }
-    const result = await BarcodeScanner.scan();
-    if (result.barcodes && result.barcodes.length > 0) {
-      const raw = result.barcodes[0].rawValue;
-      const match = raw.match(new RegExp('[?&]' + codeParam + '=([A-Z0-9]+)', 'i'));
-      const code = match ? match[1] : raw;
-      document.getElementById(inputId).value = code.toUpperCase();
-    }
-  } catch (e) {
-    console.error('QR scan error:', e);
-    alert('掃描失敗，請手動輸入代碼');
-  }
+}
+function onQRScanResult(inputId, codeParam, raw) {
+  const match = raw.match(new RegExp('[?&]' + codeParam + '=([A-Z0-9]+)', 'i'));
+  const code = match ? match[1] : raw;
+  document.getElementById(inputId).value = code.toUpperCase();
 }
 
 function openJoinRemote() {
