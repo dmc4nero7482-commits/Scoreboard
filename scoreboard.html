@@ -11,6 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@700&display=swap">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="barcode-scanner.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1183,10 +1184,28 @@
       <button class="btn-cancel" onclick="closeModal('moreModal');openJoinViewer()" style="text-align:left;padding:12px 16px">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:6px"><path d="M21 3L3 10.53v.98l6.84 2.65L12.48 21h.98L21 3z"/></svg>加入觀看
       </button>
+      <button class="btn-cancel" onclick="closeModal('moreModal');openJoinRemote()" style="text-align:left;padding:12px 16px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:6px"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>加入遙控
+      </button>
       <button id="sb-install-menu-btn" class="btn-cancel" onclick="closeModal('moreModal');openInstallGuide()" style="text-align:left;padding:12px 16px;display:none">📲 安裝到手機</button>
     </div>
     <div class="modal-row" style="margin-top:12px">
       <button class="btn-cancel" onclick="closeModal('moreModal')">關閉</button>
+    </div>
+  </div>
+</div>
+
+<!-- 加入遙控 modal -->
+<div class="modal-overlay" id="joinRemoteModal">
+  <div class="modal" style="max-width:300px">
+    <h3>🎮 加入遙控</h3>
+    <p style="font-size:0.85em;color:var(--muted);margin-bottom:14px">輸入主機的房間代碼，以此裝置控制計分</p>
+    <input id="join-remote-code" type="text" placeholder="房間代碼"
+      style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:1.1em;text-align:center;text-transform:uppercase;letter-spacing:4px;outline:none;margin-bottom:8px">
+    <button onclick="scanQRCode('join-remote-code','remote')" style="width:100%;padding:9px;border-radius:8px;border:1px dashed var(--border);background:transparent;color:var(--muted);font-size:0.9em;cursor:pointer;margin-bottom:12px">📷 掃描 QR Code</button>
+    <div class="modal-row">
+      <button class="btn-confirm" onclick="joinRemoteMode()">加入</button>
+      <button class="btn-cancel" onclick="closeModal('joinRemoteModal')">取消</button>
     </div>
   </div>
 </div>
@@ -1197,7 +1216,8 @@
     <h3>📺 加入觀看</h3>
     <p style="font-size:0.85em;color:var(--muted);margin-bottom:14px">輸入主機的房間代碼，以大螢幕顯示比分</p>
     <input id="join-view-code" type="text" placeholder="房間代碼"
-      style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:1.1em;text-align:center;text-transform:uppercase;letter-spacing:4px;outline:none;margin-bottom:12px">
+      style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:1.1em;text-align:center;text-transform:uppercase;letter-spacing:4px;outline:none;margin-bottom:8px">
+    <button onclick="scanQRCode('join-view-code','view')" style="width:100%;padding:9px;border-radius:8px;border:1px dashed var(--border);background:transparent;color:var(--muted);font-size:0.9em;cursor:pointer;margin-bottom:12px">📷 掃描 QR Code</button>
     <div class="modal-row">
       <button class="btn-confirm" onclick="joinViewerMode()">加入</button>
       <button class="btn-cancel" onclick="closeModal('joinViewerModal')">取消</button>
@@ -2421,6 +2441,42 @@ function copyViewerUrl() {
     btn.textContent = '已複製！';
     setTimeout(() => btn.textContent = orig, 1500);
   }).catch(() => {});
+}
+
+async function scanQRCode(inputId, codeParam) {
+  if (!window.capacitorBarcodeScanner || !window.Capacitor || !window.Capacitor.isNativePlatform()) {
+    alert('QR 掃描僅支援 App 版本');
+    return;
+  }
+  try {
+    const { BarcodeScanner } = window.capacitorBarcodeScanner;
+    const perms = await BarcodeScanner.requestPermissions();
+    if (perms.camera !== 'granted') {
+      alert('需要相機權限才能掃描 QR Code');
+      return;
+    }
+    const result = await BarcodeScanner.scan();
+    if (result.barcodes && result.barcodes.length > 0) {
+      const raw = result.barcodes[0].rawValue;
+      const match = raw.match(new RegExp('[?&]' + codeParam + '=([A-Z0-9]+)', 'i'));
+      const code = match ? match[1] : raw;
+      document.getElementById(inputId).value = code.toUpperCase();
+    }
+  } catch (e) {
+    console.error('QR scan error:', e);
+    alert('掃描失敗，請手動輸入代碼');
+  }
+}
+
+function openJoinRemote() {
+  document.getElementById('join-remote-code').value = '';
+  openModal('joinRemoteModal');
+}
+function joinRemoteMode() {
+  const code = document.getElementById('join-remote-code').value.trim().toUpperCase();
+  if (!code) return;
+  closeModal('joinRemoteModal');
+  initRemoteMode(code);
 }
 
 function openJoinViewer() {
