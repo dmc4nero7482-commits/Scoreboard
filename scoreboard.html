@@ -1046,6 +1046,7 @@
       <button class="btn-confirm" id="netStartBtn" onclick="startNetHost()" style="flex:1">建立房間</button>
       <button class="btn-cancel" id="netStopBtn" onclick="stopNetHost()" style="flex:1;display:none">關閉房間</button>
     </div>
+    <button onclick="closeModal('netModal');openJoinRemote()" style="width:100%;padding:9px;border-radius:8px;border:1px dashed var(--border);background:transparent;color:var(--muted);font-size:0.9em;cursor:pointer;margin-bottom:4px">📷 掃碼加入遙控</button>
 
     <div id="net-room-section" style="display:none">
       <div id="net-room-display"></div>
@@ -1168,8 +1169,8 @@
       <button class="btn-cancel"  onclick="closeModal('moreModal');openNetModal()" style="text-align:left;padding:12px 16px">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:6px"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>網路遙控
       </button>
-      <button class="btn-cancel"  onclick="closeModal('moreModal');enterPresentation()" style="text-align:left;padding:12px 16px">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:6px"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>全螢幕
+      <button class="btn-cancel" onclick="closeModal('moreModal');openShareViewer()" style="text-align:left;padding:12px 16px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:6px"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>即時觀看
       </button>
       <button class="btn-cancel" onclick="closeModal('moreModal');openSetHistory()" style="text-align:left;padding:12px 16px">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:6px"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>每局比數
@@ -1177,16 +1178,10 @@
       <button class="btn-cancel" onclick="closeModal('moreModal');openMatchHistory()" style="text-align:left;padding:12px 16px">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:6px"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>比賽紀錄
       </button>
-      <button class="btn-cancel" onclick="closeModal('moreModal');openShareViewer()" style="text-align:left;padding:12px 16px">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:6px"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>即時觀看
-      </button>
-      <button class="btn-cancel" onclick="closeModal('moreModal');openJoinViewer()" style="text-align:left;padding:12px 16px">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:6px"><path d="M21 3L3 10.53v.98l6.84 2.65L12.48 21h.98L21 3z"/></svg>加入觀看
-      </button>
-      <button class="btn-cancel" onclick="closeModal('moreModal');openJoinRemote()" style="text-align:left;padding:12px 16px">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:6px"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>加入遙控
-      </button>
       <button id="sb-install-menu-btn" class="btn-cancel" onclick="closeModal('moreModal');openInstallGuide()" style="text-align:left;padding:12px 16px;display:none">📲 安裝到手機</button>
+      <button id="sb-fullscreen-menu-btn" class="btn-cancel" onclick="closeModal('moreModal');enterPresentation()" style="text-align:left;padding:12px 16px;display:none">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:6px"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>全螢幕
+      </button>
     </div>
     <div class="modal-row" style="margin-top:12px">
       <button class="btn-cancel" onclick="closeModal('moreModal')">關閉</button>
@@ -1209,20 +1204,6 @@
   </div>
 </div>
 
-<!-- 加入觀看 modal -->
-<div class="modal-overlay" id="joinViewerModal">
-  <div class="modal" style="max-width:300px">
-    <h3>📺 加入觀看</h3>
-    <p style="font-size:0.85em;color:var(--muted);margin-bottom:14px">輸入主機的房間代碼，以大螢幕顯示比分</p>
-    <input id="join-view-code" type="text" placeholder="房間代碼"
-      style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:1.1em;text-align:center;text-transform:uppercase;letter-spacing:4px;outline:none;margin-bottom:8px">
-    <button onclick="scanQRCode('join-view-code','view')" style="width:100%;padding:9px;border-radius:8px;border:1px dashed var(--border);background:transparent;color:var(--muted);font-size:0.9em;cursor:pointer;margin-bottom:12px">📷 掃描 QR Code</button>
-    <div class="modal-row">
-      <button class="btn-confirm" onclick="joinViewerMode()">加入</button>
-      <button class="btn-cancel" onclick="closeModal('joinViewerModal')">取消</button>
-    </div>
-  </div>
-</div>
 
 <!-- 安裝教學 -->
 <div class="modal-overlay" id="installModal">
@@ -1979,7 +1960,7 @@ function renderNetRoom(code) {
   document.getElementById('netStopBtn').style.display = '';
   document.getElementById('net-status-msg').textContent = '房間已建立，等待裝置連線…';
   document.getElementById('net-qr-img').src =
-    'https://api.qrserver.com/v1/create-qr-code/?size=180x180&color=e0e6f0&bgcolor=112240&data=' +
+    'https://api.qrserver.com/v1/create-qr-code/?size=200x200&color=000000&bgcolor=ffffff&data=' +
     encodeURIComponent(remoteUrl);
 }
 
@@ -2423,11 +2404,11 @@ let _pendingShareViewer = false;
 
 function _showShareViewModal() {
   const code = netPeer.id.replace(PEER_PREFIX, '');
-  const base = location.href.split('?')[0];
+  const base = 'https://dmc4nero7482-commits.github.io/Scoreboard/scoreboard.html';
   const url = base + '?view=' + code;
   document.getElementById('share-url').textContent = url;
   document.getElementById('share-qr').src =
-    'https://api.qrserver.com/v1/create-qr-code/?size=160x160&color=e0e6f0&bgcolor=112240&data=' +
+    'https://api.qrserver.com/v1/create-qr-code/?size=200x200&color=000000&bgcolor=ffffff&data=' +
     encodeURIComponent(url);
   openModal('shareViewModal');
 }
@@ -2451,13 +2432,21 @@ function scanQRCode(inputId, codeParam) {
 }
 function onQRScanResult(inputId, codeParam, raw) {
   const match = raw.match(new RegExp('[?&]' + codeParam + '=([A-Z0-9]+)', 'i'));
-  const code = match ? match[1] : raw;
-  document.getElementById(inputId).value = code.toUpperCase();
+  const code = (match ? match[1] : raw).toUpperCase();
+  if (inputId === '__remote__') {
+    initRemoteMode(code);
+  } else {
+    document.getElementById(inputId).value = code;
+  }
 }
 
 function openJoinRemote() {
-  document.getElementById('join-remote-code').value = '';
-  openModal('joinRemoteModal');
+  if (window.AndroidQR) {
+    window.AndroidQR.startScan('__remote__', 'remote');
+  } else {
+    document.getElementById('join-remote-code').value = '';
+    openModal('joinRemoteModal');
+  }
 }
 function joinRemoteMode() {
   const code = document.getElementById('join-remote-code').value.trim().toUpperCase();
@@ -2466,16 +2455,6 @@ function joinRemoteMode() {
   initRemoteMode(code);
 }
 
-function openJoinViewer() {
-  document.getElementById('join-view-code').value = '';
-  openModal('joinViewerModal');
-}
-function joinViewerMode() {
-  const code = document.getElementById('join-view-code').value.trim().toUpperCase();
-  if (!code) return;
-  closeModal('joinViewerModal');
-  initViewerMode(code);
-}
 
 function applyExternalTeamNames(teamA, teamB) {
   if (teamA) state.nameA = teamA;
