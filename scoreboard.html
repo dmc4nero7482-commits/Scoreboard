@@ -2513,9 +2513,7 @@ function scanFromImage(event) {
 }
 
 function scanQRCode(inputId, codeParam) {
-  if (window.AndroidQR) {
-    window.AndroidQR.startScan(inputId, codeParam);
-  } else {
+  {
     _qrScanInputId = inputId;
     _qrScanCodeParam = codeParam;
     _qrTorchOn = false;
