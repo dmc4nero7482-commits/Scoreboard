@@ -667,21 +667,18 @@
   #remote-ui.watch #remote-hint { display: none; }
 
   /* ── Network modal ── */
-  #net-qr { text-align: center; margin: 12px 0; }
-  #net-qr img { border-radius: 8px; }
+  #net-qr img { border-radius: 8px; display: block; }
   #net-room-display {
-    text-align: center;
-    font-size: 32px;
+    font-size: 26px;
     font-weight: 900;
-    letter-spacing: 8px;
+    letter-spacing: 5px;
     color: var(--text);
-    margin: 8px 0 4px;
+    margin-bottom: 6px;
   }
   #net-conn-count {
-    text-align: center;
-    font-size: 13px;
+    font-size: 12px;
     color: var(--muted);
-    margin-bottom: 12px;
+    margin-bottom: 8px;
   }
   #net-conn-count.has-conn { color: #4caf50; }
   #net-status-msg { font-size: 13px; color: var(--muted); margin-bottom: 12px; min-height: 20px; }
@@ -1050,11 +1047,15 @@
       <button onclick="closeModal('netModal');openJoinRemote()" style="flex:1;padding:9px;border-radius:8px;border:1px dashed var(--border);background:transparent;color:var(--muted);font-size:0.9em;cursor:pointer">📷 掃碼遙控</button>
     </div>
 
-    <div id="net-room-section" style="display:none">
-      <div id="net-room-display"></div>
-      <div id="net-conn-count">等待裝置連線…</div>
-      <div id="net-qr"><img id="net-qr-img" src="" alt="QR Code" width="180" height="180"></div>
-      <div style="font-size:11px;color:var(--muted);text-align:center">掃描 QR code 或手動輸入房間碼</div>
+    <div id="net-room-section" style="display:none;margin-top:10px">
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="flex:1;min-width:0">
+          <div id="net-room-display"></div>
+          <div id="net-conn-count">等待裝置連線…</div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.4">掃描 QR code<br>或手動輸入房間碼</div>
+        </div>
+        <div id="net-qr"><img id="net-qr-img" src="" alt="QR Code" width="140" height="140"></div>
+      </div>
     </div>
 
     <div class="modal-row" style="margin-top:12px">
