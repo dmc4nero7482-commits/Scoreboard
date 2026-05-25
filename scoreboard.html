@@ -680,6 +680,12 @@
     color: var(--muted);
     margin-bottom: 8px;
   }
+  @media (min-width: 600px) {
+    #net-room-inner { flex-direction: column; align-items: center; }
+    #net-conn-count { text-align: center; }
+    #net-room-hint { text-align: center; }
+    #net-qr img { width: 200px; height: 200px; }
+  }
   #net-conn-count.has-conn { color: #4caf50; }
   #net-status-msg { font-size: 13px; color: var(--muted); margin-bottom: 12px; min-height: 20px; }
 
@@ -1048,11 +1054,10 @@
     </div>
 
     <div id="net-room-section" style="display:none;margin-top:10px">
-      <div style="display:flex;align-items:center;gap:14px">
+      <div id="net-room-inner" style="display:flex;align-items:center;gap:14px">
         <div style="flex:1;min-width:0">
-          <div id="net-room-display"></div>
           <div id="net-conn-count">等待裝置連線…</div>
-          <div style="font-size:11px;color:var(--muted);line-height:1.4">掃描 QR code<br>或手動輸入房間碼</div>
+          <div id="net-room-hint" style="font-size:11px;color:var(--muted);line-height:1.4">掃描 QR code 即可遙控</div>
         </div>
         <div id="net-qr"><img id="net-qr-img" src="" alt="QR Code" width="140" height="140"></div>
       </div>
