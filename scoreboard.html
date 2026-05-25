@@ -1208,9 +1208,10 @@
 
 <!-- Web QR scanner (fullscreen landscape) -->
 <div id="webQRModal" style="display:none;position:fixed;inset:0;z-index:300;background:#000;flex-direction:column">
-  <!-- 相機全螢幕 -->
-  <video id="qr-video" playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>
+  <!-- 相機全螢幕 (隱藏，作為畫面來源) -->
+  <video id="qr-video" playsinline style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none"></video>
   <canvas id="qr-canvas" style="display:none"></canvas>
+  <canvas id="qr-display" style="position:absolute;inset:0;width:100%;height:100%"></canvas>
 
   <!-- SVG 暗化遮罩（挖洞效果） -->
   <svg id="qr-overlay" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none">
@@ -2552,24 +2553,21 @@ function _onFrameDragEnd() {
 
 function toggleTorch() {
   if (!_qrStream) return;
-  const track = _qrStream.getVideoTracks()[0];
   _qrTorchOn = !_qrTorchOn;
-  track.applyConstraints({ advanced: [{ torch: _qrTorchOn }] }).catch(() => {});
+  const track = _qrStream.getVideoTracks()[0];
+  track.applyConstraints({ advanced: [{ torch: _qrTorchOn }] })
+    .catch(() => track.applyConstraints({ torch: _qrTorchOn })
+      .catch(() => {
+        if (window.ImageCapture) {
+          try { new ImageCapture(track).setPhotoSettings({ fillLightMode: _qrTorchOn ? 'torch' : 'off' }); } catch(e) {}
+        }
+      }));
   const btn = document.getElementById('qr-torch-btn');
-  if (btn) btn.style.color = _qrTorchOn ? '#f90' : 'var(--muted)';
+  if (btn) btn.style.color = _qrTorchOn ? '#f90' : 'rgba(255,255,255,0.7)';
 }
 
 function applyZoom(val) {
   _qrZoom = parseFloat(val);
-  const video = document.getElementById('qr-video');
-  if (video) {
-    video.style.transform = `scale(${_qrZoom})`;
-    video.style.transformOrigin = 'center center';
-  }
-  if (_qrStream) {
-    const track = _qrStream.getVideoTracks()[0];
-    track.applyConstraints({ advanced: [{ zoom: _qrZoom }] }).catch(() => {});
-  }
 }
 
 function scanFromImage(event) {
@@ -2625,10 +2623,21 @@ function scanQRCode(inputId, codeParam) {
 function _tickQR() {
   const video = document.getElementById('qr-video');
   const canvas = document.getElementById('qr-canvas');
+  const display = document.getElementById('qr-display');
   if (!video || video.readyState < 2) { _qrAnimFrame = requestAnimationFrame(_tickQR); return; }
   const vw = video.videoWidth, vh = video.videoHeight;
   const sw = window.innerWidth, sh = window.innerHeight;
   const scale = Math.max(vw / sw, vh / sh);
+
+  // 顯示畫布：模擬 object-fit:cover 並套用縮放裁切（無失真）
+  if (display) {
+    if (display.width !== sw || display.height !== sh) { display.width = sw; display.height = sh; }
+    const dSrcW = sw / (scale * _qrZoom);
+    const dSrcH = sh / (scale * _qrZoom);
+    display.getContext('2d').drawImage(video, (vw - dSrcW) / 2, (vh - dSrcH) / 2, dSrcW, dSrcH, 0, 0, sw, sh);
+  }
+
+  // 偵測畫布：僅裁切橘框範圍給 jsQR
   const fs = _qrFrameSize * scale;
   const fx = (sw / 2 - _qrFrameSize / 2) * scale + (vw - sw * scale) / 2;
   const fy = (sh / 2 - _qrFrameSize / 2) * scale + (vh - sh * scale) / 2;
