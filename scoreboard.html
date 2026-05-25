@@ -2485,6 +2485,7 @@ let _qrAnimFrame = null;
 let _qrStream = null;
 let _qrTorchOn = false;
 let _qrFrameSize = 200;
+let _qrZoom = 1;
 let _qrDragCorner = null;
 let _qrDragStartX = 0;
 let _qrDragStartY = 0;
@@ -2559,9 +2560,16 @@ function toggleTorch() {
 }
 
 function applyZoom(val) {
-  if (!_qrStream) return;
-  const track = _qrStream.getVideoTracks()[0];
-  track.applyConstraints({ advanced: [{ zoom: parseFloat(val) }] }).catch(() => {});
+  _qrZoom = parseFloat(val);
+  const video = document.getElementById('qr-video');
+  if (video) {
+    video.style.transform = `scale(${_qrZoom})`;
+    video.style.transformOrigin = 'center center';
+  }
+  if (_qrStream) {
+    const track = _qrStream.getVideoTracks()[0];
+    track.applyConstraints({ advanced: [{ zoom: _qrZoom }] }).catch(() => {});
+  }
 }
 
 function scanFromImage(event) {
@@ -2593,7 +2601,10 @@ function scanQRCode(inputId, codeParam) {
     _qrTorchOn = false;
     document.getElementById('webQRModal').style.display = 'flex';
     document.getElementById('qr-status').textContent = '對準 QR Code 進行掃描...';
+    _qrZoom = 1;
     document.getElementById('qr-zoom').value = 1;
+    const video2 = document.getElementById('qr-video');
+    if (video2) video2.style.transform = '';
     const torchBtn = document.getElementById('qr-torch-btn');
     if (torchBtn) torchBtn.style.color = 'rgba(255,255,255,0.7)';
     _initQRFrame();
@@ -2621,11 +2632,15 @@ function _tickQR() {
   const fs = _qrFrameSize * scale;
   const fx = (sw / 2 - _qrFrameSize / 2) * scale + (vw - sw * scale) / 2;
   const fy = (sh / 2 - _qrFrameSize / 2) * scale + (vh - sh * scale) / 2;
-  canvas.width = fs;
-  canvas.height = fs;
+  const zoomedFs = fs / _qrZoom;
+  const srcX = fx + (fs - zoomedFs) / 2;
+  const srcY = fy + (fs - zoomedFs) / 2;
+  const outSize = Math.round(zoomedFs);
+  canvas.width = outSize;
+  canvas.height = outSize;
   const ctx = canvas.getContext('2d');
-  ctx.drawImage(video, fx, fy, fs, fs, 0, 0, fs, fs);
-  const img = ctx.getImageData(0, 0, fs, fs);
+  ctx.drawImage(video, srcX, srcY, zoomedFs, zoomedFs, 0, 0, outSize, outSize);
+  const img = ctx.getImageData(0, 0, outSize, outSize);
   const result = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
   if (result) {
     stopWebQRScan();
