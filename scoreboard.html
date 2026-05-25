@@ -2490,11 +2490,15 @@ function _tickQR() {
 }
 
 function stopWebQRScan() {
+  const returnTo = _qrScanInputId === '__remote__' ? 'netModal'
+                 : _qrScanInputId === '__viewer__' ? 'moreModal'
+                 : null;
   if (_qrAnimFrame) { cancelAnimationFrame(_qrAnimFrame); _qrAnimFrame = null; }
   if (_qrStream) { _qrStream.getTracks().forEach(t => t.stop()); _qrStream = null; }
   const video = document.getElementById('qr-video');
   if (video) { video.removeEventListener('loadeddata', _tickQR); video.srcObject = null; }
   closeModal('webQRModal');
+  if (returnTo) openModal(returnTo);
 }
 
 function onQRScanResult(inputId, codeParam, raw) {
@@ -2537,6 +2541,7 @@ function stopViewerMode() {
   if (netPeer) { netPeer.destroy(); netPeer = null; }
   document.getElementById('viewer-ui').classList.remove('active');
   document.getElementById('viewer-status').textContent = '連線中…';
+  openModal('moreModal');
 }
 
 function initViewerMode(code) {
