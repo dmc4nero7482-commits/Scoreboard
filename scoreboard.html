@@ -11,6 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@700&display=swap">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1042,10 +1043,8 @@
     </h3>
     <p id="net-status-msg">點「建立房間」產生連線碼，用其他裝置掃 QR code 即可遙控。</p>
 
-    <div style="display:flex;gap:8px;margin-bottom:10px">
-      <button class="btn-confirm" id="netStartBtn" onclick="startNetHost()" style="flex:1">建立房間</button>
-      <button class="btn-cancel" id="netStopBtn" onclick="stopNetHost()" style="flex:1;display:none">關閉房間</button>
-    </div>
+    <button id="netStartBtn" onclick="startNetHost()" style="width:100%;padding:9px;border-radius:8px;border:1px dashed var(--border);background:transparent;color:var(--muted);font-size:0.9em;cursor:pointer;margin-bottom:8px">🔗 建立房間</button>
+    <button id="netStopBtn" onclick="stopNetHost()" style="width:100%;padding:9px;border-radius:8px;border:1px dashed var(--border);background:transparent;color:var(--muted);font-size:0.9em;cursor:pointer;margin-bottom:8px;display:none">✖ 關閉房間</button>
     <button onclick="closeModal('netModal');openJoinRemote()" style="width:100%;padding:9px;border-radius:8px;border:1px dashed var(--border);background:transparent;color:var(--muted);font-size:0.9em;cursor:pointer;margin-bottom:4px">📷 掃碼加入遙控</button>
 
     <div id="net-room-section" style="display:none">
@@ -1204,6 +1203,22 @@
   </div>
 </div>
 
+
+<!-- Web QR scanner modal -->
+<div class="modal-overlay" id="webQRModal">
+  <div class="modal" style="max-width:320px;padding:16px">
+    <h3 style="margin-bottom:12px">📷 掃描 QR Code</h3>
+    <div style="position:relative;width:100%;border-radius:10px;overflow:hidden;background:#000;aspect-ratio:1">
+      <video id="qr-video" playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video>
+      <canvas id="qr-canvas" style="display:none"></canvas>
+      <div style="position:absolute;inset:0;border:3px solid rgba(255,255,255,0.3);border-radius:10px;pointer-events:none"></div>
+    </div>
+    <p id="qr-status" style="font-size:0.82em;color:var(--muted);text-align:center;margin:10px 0 12px">對準 QR Code 進行掃描...</p>
+    <div class="modal-row">
+      <button class="btn-cancel" onclick="stopWebQRScan()">取消</button>
+    </div>
+  </div>
+</div>
 
 <!-- 安裝教學 -->
 <div class="modal-overlay" id="installModal">
@@ -1936,7 +1951,7 @@ function startNetHost() {
   });
   netPeer.on('error', err => {
     document.getElementById('net-status-msg').textContent = '連線失敗：' + err.type;
-    document.getElementById('netStartBtn').textContent = '建立房間';
+    document.getElementById('netStartBtn').textContent = '🔗 建立房間';
     document.getElementById('netStartBtn').disabled = false;
   });
 }
@@ -1947,7 +1962,7 @@ function stopNetHost() {
   document.getElementById('net-room-section').style.display = 'none';
   document.getElementById('netStartBtn').style.display = '';
   document.getElementById('netStopBtn').style.display = 'none';
-  document.getElementById('netStartBtn').textContent = '建立房間';
+  document.getElementById('netStartBtn').textContent = '🔗 建立房間';
   document.getElementById('netStartBtn').disabled = false;
   document.getElementById('net-status-msg').textContent = '點「建立房間」產生連線碼，用其他裝置掃 QR code 即可遙控。';
 }
@@ -2423,13 +2438,59 @@ function copyViewerUrl() {
   }).catch(() => {});
 }
 
+let _qrScanInputId = null;
+let _qrScanCodeParam = null;
+let _qrAnimFrame = null;
+let _qrStream = null;
+
 function scanQRCode(inputId, codeParam) {
   if (window.AndroidQR) {
     window.AndroidQR.startScan(inputId, codeParam);
   } else {
-    alert('QR 掃描僅支援 App 版本');
+    _qrScanInputId = inputId;
+    _qrScanCodeParam = codeParam;
+    openModal('webQRModal');
+    document.getElementById('qr-status').textContent = '對準 QR Code 進行掃描...';
+    const video = document.getElementById('qr-video');
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      .then(stream => {
+        _qrStream = stream;
+        video.srcObject = stream;
+        video.play();
+        video.addEventListener('loadeddata', _tickQR);
+      })
+      .catch(() => {
+        document.getElementById('qr-status').textContent = '無法存取相機';
+      });
   }
 }
+
+function _tickQR() {
+  const video = document.getElementById('qr-video');
+  const canvas = document.getElementById('qr-canvas');
+  if (!video || video.readyState < 2) { _qrAnimFrame = requestAnimationFrame(_tickQR); return; }
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0);
+  const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const result = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+  if (result) {
+    stopWebQRScan();
+    onQRScanResult(_qrScanInputId, _qrScanCodeParam, result.data);
+  } else {
+    _qrAnimFrame = requestAnimationFrame(_tickQR);
+  }
+}
+
+function stopWebQRScan() {
+  if (_qrAnimFrame) { cancelAnimationFrame(_qrAnimFrame); _qrAnimFrame = null; }
+  if (_qrStream) { _qrStream.getTracks().forEach(t => t.stop()); _qrStream = null; }
+  const video = document.getElementById('qr-video');
+  if (video) { video.removeEventListener('loadeddata', _tickQR); video.srcObject = null; }
+  closeModal('webQRModal');
+}
+
 function onQRScanResult(inputId, codeParam, raw) {
   const match = raw.match(new RegExp('[?&]' + codeParam + '=([A-Z0-9]+)', 'i'));
   const code = (match ? match[1] : raw).toUpperCase();
@@ -2443,20 +2504,11 @@ function onQRScanResult(inputId, codeParam, raw) {
 }
 
 function openJoinViewer() {
-  if (window.AndroidQR) {
-    window.AndroidQR.startScan('__viewer__', 'view');
-  } else {
-    openShareViewer();
-  }
+  scanQRCode('__viewer__', 'view');
 }
 
 function openJoinRemote() {
-  if (window.AndroidQR) {
-    window.AndroidQR.startScan('__remote__', 'remote');
-  } else {
-    document.getElementById('join-remote-code').value = '';
-    openModal('joinRemoteModal');
-  }
+  scanQRCode('__remote__', 'remote');
 }
 function joinRemoteMode() {
   const code = document.getElementById('join-remote-code').value.trim().toUpperCase();
