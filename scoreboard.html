@@ -668,14 +668,7 @@
 
   /* ── Network modal ── */
   #net-qr img { border-radius: 8px; display: block; }
-  #net-room-display {
-    font-size: 26px;
-    font-weight: 900;
-    letter-spacing: 5px;
-    color: var(--text);
-    margin-bottom: 6px;
-  }
-  #net-conn-count {
+#net-conn-count {
     font-size: 12px;
     color: var(--muted);
     margin-bottom: 8px;
@@ -1982,7 +1975,6 @@ function stopNetHost() {
 
 function renderNetRoom(code) {
   const remoteUrl = location.href.split('?')[0] + '?remote=' + code;
-  document.getElementById('net-room-display').textContent = code;
   document.getElementById('net-room-section').style.display = 'block';
   document.getElementById('netStartBtn').style.display = 'none';
   document.getElementById('netStopBtn').style.display = '';
