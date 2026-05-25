@@ -2611,7 +2611,7 @@ function scanQRCode(inputId, codeParam) {
     if (torchBtn) torchBtn.style.color = 'rgba(255,255,255,0.7)';
     _initQRFrame();
     const video = document.getElementById('qr-video');
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } } })
       .then(stream => {
         _qrStream = stream;
         video.srcObject = stream;
@@ -2640,7 +2640,10 @@ function _tickQR() {
     if (display.width !== pw || display.height !== ph) { display.width = pw; display.height = ph; }
     const dSrcW = sw / (scale * _qrZoom);
     const dSrcH = sh / (scale * _qrZoom);
-    display.getContext('2d').drawImage(video, (vw - dSrcW) / 2, (vh - dSrcH) / 2, dSrcW, dSrcH, 0, 0, pw, ph);
+    const dCtx = display.getContext('2d');
+    dCtx.imageSmoothingEnabled = true;
+    dCtx.imageSmoothingQuality = 'high';
+    dCtx.drawImage(video, (vw - dSrcW) / 2, (vh - dSrcH) / 2, dSrcW, dSrcH, 0, 0, pw, ph);
   }
 
   // 偵測畫布：僅裁切橘框範圍給 jsQR
