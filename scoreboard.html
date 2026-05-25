@@ -1754,6 +1754,7 @@ function render() {
   document.getElementById('panelA').classList.toggle('serving', state.serving === 'A');
   document.getElementById('panelB').classList.toggle('serving', state.serving === 'B');
 
+  broadcastState();
 }
 
 // ── Modal helpers ──
