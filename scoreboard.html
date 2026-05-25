@@ -1002,6 +1002,7 @@
 <!-- Viewer UI (read-only live display) -->
 <div id="viewer-ui">
   <div id="viewer-topbar">
+    <button onclick="stopViewerMode()" style="position:absolute;left:10px;background:none;border:none;color:rgba(255,255,255,0.7);font-size:1.2em;cursor:pointer;padding:4px 8px">&#8592;</button>
     <span id="viewer-title">羽球計分板</span>
     <span id="viewer-timer">00:00</span>
     <span id="viewer-status">連線中…</span>
@@ -1043,9 +1044,11 @@
     </h3>
     <p id="net-status-msg">點「建立房間」產生連線碼，用其他裝置掃 QR code 即可遙控。</p>
 
-    <button id="netStartBtn" onclick="startNetHost()" style="width:100%;padding:9px;border-radius:8px;border:1px dashed var(--border);background:transparent;color:var(--muted);font-size:0.9em;cursor:pointer;margin-bottom:8px">🔗 建立房間</button>
-    <button id="netStopBtn" onclick="stopNetHost()" style="width:100%;padding:9px;border-radius:8px;border:1px dashed var(--border);background:transparent;color:var(--muted);font-size:0.9em;cursor:pointer;margin-bottom:8px;display:none">✖ 關閉房間</button>
-    <button onclick="closeModal('netModal');openJoinRemote()" style="width:100%;padding:9px;border-radius:8px;border:1px dashed var(--border);background:transparent;color:var(--muted);font-size:0.9em;cursor:pointer;margin-bottom:4px">📷 掃碼加入遙控</button>
+    <div style="display:flex;gap:8px;margin-bottom:4px">
+      <button id="netStartBtn" onclick="startNetHost()" style="flex:1;padding:9px;border-radius:8px;border:1px dashed var(--border);background:transparent;color:var(--muted);font-size:0.9em;cursor:pointer">🔗 建立房間</button>
+      <button id="netStopBtn" onclick="stopNetHost()" style="flex:1;padding:9px;border-radius:8px;border:1px dashed var(--border);background:transparent;color:var(--muted);font-size:0.9em;cursor:pointer;display:none">✖ 關閉房間</button>
+      <button onclick="closeModal('netModal');openJoinRemote()" style="flex:1;padding:9px;border-radius:8px;border:1px dashed var(--border);background:transparent;color:var(--muted);font-size:0.9em;cursor:pointer">📷 掃碼加入遙控</button>
+    </div>
 
     <div id="net-room-section" style="display:none">
       <div id="net-room-display"></div>
@@ -1207,7 +1210,10 @@
 <!-- Web QR scanner modal -->
 <div class="modal-overlay" id="webQRModal">
   <div class="modal" style="max-width:320px;padding:16px">
-    <h3 style="margin-bottom:12px">📷 掃描 QR Code</h3>
+    <div style="position:relative;margin-bottom:12px">
+      <button onclick="stopWebQRScan()" style="position:absolute;left:0;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text);font-size:1.2em;cursor:pointer;padding:4px 8px">&#8592;</button>
+      <h3 style="text-align:center">📷 掃描 QR Code</h3>
+    </div>
     <div style="position:relative;width:100%;border-radius:10px;overflow:hidden;background:#000;aspect-ratio:1">
       <video id="qr-video" playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video>
       <canvas id="qr-canvas" style="display:none"></canvas>
@@ -2525,6 +2531,12 @@ function applyExternalTeamNames(teamA, teamB) {
     netHostConn.send({ type: 'setNames', nameA: state.nameA, nameB: state.nameB });
   }
   render();
+}
+
+function stopViewerMode() {
+  if (netPeer) { netPeer.destroy(); netPeer = null; }
+  document.getElementById('viewer-ui').classList.remove('active');
+  document.getElementById('viewer-status').textContent = '連線中…';
 }
 
 function initViewerMode(code) {
