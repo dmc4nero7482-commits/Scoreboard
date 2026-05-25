@@ -2554,14 +2554,18 @@ function _onFrameDragEnd() {
 function toggleTorch() {
   if (!_qrStream) return;
   _qrTorchOn = !_qrTorchOn;
-  const track = _qrStream.getVideoTracks()[0];
-  track.applyConstraints({ advanced: [{ torch: _qrTorchOn }] })
-    .catch(() => track.applyConstraints({ torch: _qrTorchOn })
-      .catch(() => {
-        if (window.ImageCapture) {
-          try { new ImageCapture(track).setPhotoSettings({ fillLightMode: _qrTorchOn ? 'torch' : 'off' }); } catch(e) {}
-        }
-      }));
+  if (window.AndroidTorch) {
+    window.AndroidTorch.setTorch(_qrTorchOn);
+  } else {
+    const track = _qrStream.getVideoTracks()[0];
+    track.applyConstraints({ advanced: [{ torch: _qrTorchOn }] })
+      .catch(() => track.applyConstraints({ torch: _qrTorchOn })
+        .catch(() => {
+          if (window.ImageCapture) {
+            try { new ImageCapture(track).setPhotoSettings({ fillLightMode: _qrTorchOn ? 'torch' : 'off' }); } catch(e) {}
+          }
+        }));
+  }
   const btn = document.getElementById('qr-torch-btn');
   if (btn) btn.style.color = _qrTorchOn ? '#f90' : 'rgba(255,255,255,0.7)';
 }
@@ -2629,12 +2633,14 @@ function _tickQR() {
   const sw = window.innerWidth, sh = window.innerHeight;
   const scale = Math.max(vw / sw, vh / sh);
 
-  // 顯示畫布：模擬 object-fit:cover 並套用縮放裁切（無失真）
+  // 顯示畫布：模擬 object-fit:cover 並套用縮放裁切（無失真，按 devicePixelRatio 渲染）
   if (display) {
-    if (display.width !== sw || display.height !== sh) { display.width = sw; display.height = sh; }
+    const dpr = window.devicePixelRatio || 1;
+    const pw = Math.round(sw * dpr), ph = Math.round(sh * dpr);
+    if (display.width !== pw || display.height !== ph) { display.width = pw; display.height = ph; }
     const dSrcW = sw / (scale * _qrZoom);
     const dSrcH = sh / (scale * _qrZoom);
-    display.getContext('2d').drawImage(video, (vw - dSrcW) / 2, (vh - dSrcH) / 2, dSrcW, dSrcH, 0, 0, sw, sh);
+    display.getContext('2d').drawImage(video, (vw - dSrcW) / 2, (vh - dSrcH) / 2, dSrcW, dSrcH, 0, 0, pw, ph);
   }
 
   // 偵測畫布：僅裁切橘框範圍給 jsQR
