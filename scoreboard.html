@@ -2559,7 +2559,7 @@ function toggleTorch() {
     .then(() => { if (btn) btn.style.color = _qrTorchOn ? '#f90' : 'rgba(255,255,255,0.7)'; })
     .catch(() => {
       if (!_qrTorchOn) { if (btn) btn.style.color = 'rgba(255,255,255,0.7)'; return; }
-      // applyConstraints 失敗時，重新開啟相機並在 getUserMedia 中帶入 torch 要求
+      // 第二層：重開相機並在 getUserMedia 帶入 torch 要求（仍走相機 session，不走系統手電筒）
       if (_qrAnimFrame) { cancelAnimationFrame(_qrAnimFrame); _qrAnimFrame = null; }
       _qrStream.getTracks().forEach(t => t.stop());
       navigator.mediaDevices.getUserMedia({
@@ -2573,8 +2573,14 @@ function toggleTorch() {
         video.addEventListener('loadeddata', _tickQR);
         if (btn) btn.style.color = '#f90';
       }).catch(() => {
-        _qrTorchOn = false;
-        if (btn) btn.style.color = 'rgba(255,255,255,0.7)';
+        // 最後備援：native bridge（可能觸發系統通知，但能確保燈亮）
+        if (window.AndroidTorch) {
+          window.AndroidTorch.setTorch(true);
+          if (btn) btn.style.color = '#f90';
+        } else {
+          _qrTorchOn = false;
+          if (btn) btn.style.color = 'rgba(255,255,255,0.7)';
+        }
       });
     });
 }
@@ -2631,7 +2637,7 @@ function scanQRCode(inputId, codeParam) {
     if (torchBtn) torchBtn.style.color = 'rgba(255,255,255,0.7)';
     _initQRFrame();
     const video = document.getElementById('qr-video');
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } } })
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 }, advanced: [{ torch: false }] } })
       .then(stream => {
         _qrStream = stream;
         video.srcObject = stream;
