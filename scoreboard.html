@@ -2558,7 +2558,6 @@ function toggleTorch() {
   track.applyConstraints({ advanced: [{ torch: _qrTorchOn }] })
     .then(() => { if (btn) btn.style.color = _qrTorchOn ? '#f90' : 'rgba(255,255,255,0.7)'; })
     .catch(() => {
-      // web API 不支援，直接用 native bridge
       if (window.AndroidTorch) {
         window.AndroidTorch.setTorch(_qrTorchOn);
         if (btn) btn.style.color = _qrTorchOn ? '#f90' : 'rgba(255,255,255,0.7)';
@@ -2597,8 +2596,13 @@ function scanFromImage(event) {
     const imageData = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
     const result = jsQR(imageData.data, imageData.width, imageData.height);
     if (result) {
-      stopWebQRScan();
-      onQRScanResult(_qrScanInputId, _qrScanCodeParam, result.data);
+      const isRoomScan = _qrScanInputId === '__remote__' || _qrScanInputId === '__viewer__';
+      if (isRoomScan && !result.data.match(/[?&]remote=([A-Z0-9]+)/i)) {
+        document.getElementById('qr-status').textContent = '⚠ 非房間 QR Code，請重新掃描';
+      } else {
+        stopWebQRScan();
+        onQRScanResult(_qrScanInputId, _qrScanCodeParam, result.data);
+      }
     } else {
       document.getElementById('qr-status').textContent = '圖片中未找到 QR Code';
     }
@@ -2621,7 +2625,7 @@ function scanQRCode(inputId, codeParam) {
     if (torchBtn) torchBtn.style.color = 'rgba(255,255,255,0.7)';
     _initQRFrame();
     const video = document.getElementById('qr-video');
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 }, advanced: [{ torch: false }] } })
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } } })
       .then(stream => {
         _qrStream = stream;
         video.srcObject = stream;
@@ -2657,8 +2661,18 @@ function _tickQR() {
   const img = ctx.getImageData(0, 0, outSize, outSize);
   const result = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
   if (result) {
-    stopWebQRScan();
-    onQRScanResult(_qrScanInputId, _qrScanCodeParam, result.data);
+    const isRoomScan = _qrScanInputId === '__remote__' || _qrScanInputId === '__viewer__';
+    if (isRoomScan && !result.data.match(/[?&]remote=([A-Z0-9]+)/i)) {
+      document.getElementById('qr-status').textContent = '⚠ 非房間 QR Code，請重新掃描';
+      setTimeout(() => {
+        const s = document.getElementById('qr-status');
+        if (s && s.textContent.startsWith('⚠')) s.textContent = '對準 QR Code 進行掃描...';
+      }, 2000);
+      _qrAnimFrame = requestAnimationFrame(_tickQR);
+    } else {
+      stopWebQRScan();
+      onQRScanResult(_qrScanInputId, _qrScanCodeParam, result.data);
+    }
   } else {
     _qrAnimFrame = requestAnimationFrame(_tickQR);
   }
