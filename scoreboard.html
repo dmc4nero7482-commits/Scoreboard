@@ -2554,24 +2554,43 @@ function _onFrameDragEnd() {
 function toggleTorch() {
   if (!_qrStream) return;
   _qrTorchOn = !_qrTorchOn;
+  const btn = document.getElementById('qr-torch-btn');
   if (window.AndroidTorch) {
     window.AndroidTorch.setTorch(_qrTorchOn);
-  } else {
-    const track = _qrStream.getVideoTracks()[0];
-    track.applyConstraints({ advanced: [{ torch: _qrTorchOn }] })
-      .catch(() => track.applyConstraints({ torch: _qrTorchOn })
-        .catch(() => {
-          if (window.ImageCapture) {
-            try { new ImageCapture(track).setPhotoSettings({ fillLightMode: _qrTorchOn ? 'torch' : 'off' }); } catch(e) {}
-          }
-        }));
+    if (btn) btn.style.color = _qrTorchOn ? '#f90' : 'rgba(255,255,255,0.7)';
+    return;
   }
-  const btn = document.getElementById('qr-torch-btn');
-  if (btn) btn.style.color = _qrTorchOn ? '#f90' : 'rgba(255,255,255,0.7)';
+  const track = _qrStream.getVideoTracks()[0];
+  track.applyConstraints({ advanced: [{ torch: _qrTorchOn }] })
+    .then(() => { if (btn) btn.style.color = _qrTorchOn ? '#f90' : 'rgba(255,255,255,0.7)'; })
+    .catch(() => {
+      if (!_qrTorchOn) { if (btn) btn.style.color = 'rgba(255,255,255,0.7)'; return; }
+      // applyConstraints 失敗時，重新開啟相機並在 getUserMedia 中帶入 torch 要求
+      if (_qrAnimFrame) { cancelAnimationFrame(_qrAnimFrame); _qrAnimFrame = null; }
+      _qrStream.getTracks().forEach(t => t.stop());
+      navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 }, advanced: [{ torch: true }] }
+      }).then(stream => {
+        _qrStream = stream;
+        const video = document.getElementById('qr-video');
+        video.removeEventListener('loadeddata', _tickQR);
+        video.srcObject = stream;
+        video.play();
+        video.addEventListener('loadeddata', _tickQR);
+        if (btn) btn.style.color = '#f90';
+      }).catch(() => {
+        _qrTorchOn = false;
+        if (btn) btn.style.color = 'rgba(255,255,255,0.7)';
+      });
+    });
 }
 
 function applyZoom(val) {
   _qrZoom = parseFloat(val);
+  if (_qrStream) {
+    const track = _qrStream.getVideoTracks()[0];
+    track.applyConstraints({ advanced: [{ zoom: _qrZoom }] }).catch(() => {});
+  }
 }
 
 function scanFromImage(event) {
