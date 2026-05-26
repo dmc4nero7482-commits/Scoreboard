@@ -2558,30 +2558,14 @@ function toggleTorch() {
   track.applyConstraints({ advanced: [{ torch: _qrTorchOn }] })
     .then(() => { if (btn) btn.style.color = _qrTorchOn ? '#f90' : 'rgba(255,255,255,0.7)'; })
     .catch(() => {
-      if (!_qrTorchOn) { if (btn) btn.style.color = 'rgba(255,255,255,0.7)'; return; }
-      // 第二層：重開相機並在 getUserMedia 帶入 torch 要求（仍走相機 session，不走系統手電筒）
-      if (_qrAnimFrame) { cancelAnimationFrame(_qrAnimFrame); _qrAnimFrame = null; }
-      _qrStream.getTracks().forEach(t => t.stop());
-      navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 }, advanced: [{ torch: true }] }
-      }).then(stream => {
-        _qrStream = stream;
-        const video = document.getElementById('qr-video');
-        video.removeEventListener('loadeddata', _tickQR);
-        video.srcObject = stream;
-        video.play();
-        video.addEventListener('loadeddata', _tickQR);
-        if (btn) btn.style.color = '#f90';
-      }).catch(() => {
-        // 最後備援：native bridge（可能觸發系統通知，但能確保燈亮）
-        if (window.AndroidTorch) {
-          window.AndroidTorch.setTorch(true);
-          if (btn) btn.style.color = '#f90';
-        } else {
-          _qrTorchOn = false;
-          if (btn) btn.style.color = 'rgba(255,255,255,0.7)';
-        }
-      });
+      // web API 不支援，直接用 native bridge
+      if (window.AndroidTorch) {
+        window.AndroidTorch.setTorch(_qrTorchOn);
+        if (btn) btn.style.color = _qrTorchOn ? '#f90' : 'rgba(255,255,255,0.7)';
+      } else {
+        _qrTorchOn = !_qrTorchOn;
+        if (btn) btn.style.color = 'rgba(255,255,255,0.7)';
+      }
     });
 }
 
