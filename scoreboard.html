@@ -2554,11 +2554,6 @@ function toggleTorch() {
   if (!_qrStream) return;
   _qrTorchOn = !_qrTorchOn;
   const btn = document.getElementById('qr-torch-btn');
-  if (window.AndroidTorch) {
-    window.AndroidTorch.setTorch(_qrTorchOn);
-    if (btn) btn.style.color = _qrTorchOn ? '#f90' : 'rgba(255,255,255,0.7)';
-    return;
-  }
   const track = _qrStream.getVideoTracks()[0];
   track.applyConstraints({ advanced: [{ torch: _qrTorchOn }] })
     .then(() => { if (btn) btn.style.color = _qrTorchOn ? '#f90' : 'rgba(255,255,255,0.7)'; })
