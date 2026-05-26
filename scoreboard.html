@@ -955,6 +955,7 @@
 <!-- Remote control UI (shown on second device) -->
 <div id="remote-ui">
   <div id="remote-topbar">
+    <button onclick="exitRemoteMode()" style="background:none;border:none;color:inherit;font-size:1.4em;cursor:pointer;padding:4px 8px 4px 0;line-height:1;flex-shrink:0">&#8592;</button>
     <div><span id="remote-status-dot"></span><span id="remote-status-text">連線中…</span></div>
     <div id="remote-code-badge"></div>
     <div style="font-size:11px;color:var(--muted)">遙控器</div>
@@ -2105,6 +2106,14 @@ function initRemoteMode(code) {
   netPeer.on('error', () => setRemoteStatus('err', '無法連線，請確認房間碼'));
 }
 
+function exitRemoteMode() {
+  if (netHostConn) { try { netHostConn.close(); } catch(e) {} netHostConn = null; }
+  if (netPeer) { netPeer.destroy(); netPeer = null; }
+  isRemoteMode = false;
+  document.getElementById('remote-ui').classList.remove('active');
+  setRemoteStatus('', '連線中…');
+}
+
 function remShowResetConfirm() {
   const el = document.getElementById('rem-reset-confirm');
   el.style.display = 'flex';
@@ -2691,6 +2700,15 @@ function stopWebQRScan() {
 }
 
 function onQRScanResult(inputId, codeParam, raw) {
+  const isRoomScan = inputId === '__remote__' || inputId === '__viewer__';
+  if (isRoomScan && !raw.match(/[?&]remote=([A-Z0-9]+)/i)) {
+    scanQRCode(inputId, codeParam);
+    setTimeout(() => {
+      const s = document.getElementById('qr-status');
+      if (s) s.textContent = '⚠ 非房間 QR Code，請重新掃描';
+    }, 300);
+    return;
+  }
   const match = raw.match(new RegExp('[?&]' + codeParam + '=([A-Z0-9]+)', 'i'));
   const code = (match ? match[1] : raw).toUpperCase();
   if (inputId === '__remote__') {
