@@ -956,7 +956,7 @@
 <div id="remote-ui">
   <div id="remote-topbar">
     <button onclick="exitRemoteMode()" style="background:none;border:none;color:inherit;font-size:1.4em;cursor:pointer;padding:4px 8px 4px 0;line-height:1;flex-shrink:0">&#8592;</button>
-    <div><span id="remote-status-dot"></span><span id="remote-status-text">連線中…</span></div>
+    <div style="display:flex;align-items:center;gap:8px"><span id="remote-status-dot"></span><span id="remote-status-text">連線中…</span><button id="rem-retry-btn" onclick="retryRemoteMode()" style="display:none;background:rgba(255,255,255,0.15);border:none;border-radius:12px;color:#fff;font-size:11px;padding:3px 10px;cursor:pointer">重試</button></div>
     <div id="remote-code-badge"></div>
     <div style="font-size:11px;color:var(--muted)">遙控器</div>
   </div>
@@ -1983,11 +1983,17 @@ function startNetHost() {
     renderNetRoom(code);
   });
   netPeer.on('connection', conn => {
-    netRemoteConns.push(conn);
-    updateNetConnCount();
-    conn.on('open', () => broadcastState());
+    conn.on('open', () => {
+      netRemoteConns.push(conn);
+      updateNetConnCount();
+      broadcastState();
+    });
     conn.on('data', cmd => handleNetCmd(cmd));
     conn.on('close', () => {
+      netRemoteConns = netRemoteConns.filter(c => c !== conn);
+      updateNetConnCount();
+    });
+    conn.on('error', () => {
       netRemoteConns = netRemoteConns.filter(c => c !== conn);
       updateNetConnCount();
     });
@@ -2068,12 +2074,19 @@ function openNetModal() {
 
 // ── Remote side ──
 function initRemoteMode(code) {
+  // 先清除舊的連線
+  if (netHostConn) { try { netHostConn.close(); } catch(e) {} netHostConn = null; }
+  if (netPeer) { netPeer.destroy(); netPeer = null; }
+
   isRemoteMode = true;
   document.getElementById('remote-ui').classList.add('active');
   document.getElementById('remote-code-badge').textContent = code;
+  document.getElementById('rem-retry-btn').style.display = 'none';
+  setRemoteStatus('', '連線中…');
 
   if (typeof Peer === 'undefined') {
     setRemoteStatus('err', 'PeerJS 載入失敗，請檢查網路');
+    document.getElementById('rem-retry-btn').style.display = '';
     return;
   }
 
@@ -2082,12 +2095,19 @@ function initRemoteMode(code) {
     netHostConn = netPeer.connect(PEER_PREFIX + code, { reliable: true });
     netHostConn.on('open', () => {
       setRemoteStatus('ok', '已連線');
+      document.getElementById('rem-retry-btn').style.display = 'none';
       if (state.nameA !== '隊伍 A' || state.nameB !== '隊伍 B') {
         netHostConn.send({ type: 'setNames', nameA: state.nameA, nameB: state.nameB });
       }
     });
-    netHostConn.on('close', () => setRemoteStatus('err', '已斷線'));
-    netHostConn.on('error', () => setRemoteStatus('err', '連線失敗'));
+    netHostConn.on('close', () => {
+      setRemoteStatus('err', '已斷線');
+      document.getElementById('rem-retry-btn').style.display = '';
+    });
+    netHostConn.on('error', () => {
+      setRemoteStatus('err', '連線失敗');
+      document.getElementById('rem-retry-btn').style.display = '';
+    });
     netHostConn.on('data', data => {
       if (data && data.type === 'state') {
         document.getElementById('rem-score-a').textContent = data.scoreA;
@@ -2103,7 +2123,10 @@ function initRemoteMode(code) {
       }
     });
   });
-  netPeer.on('error', () => setRemoteStatus('err', '無法連線，請確認房間碼'));
+  netPeer.on('error', () => {
+    setRemoteStatus('err', '無法連線，請確認房間碼');
+    document.getElementById('rem-retry-btn').style.display = '';
+  });
 }
 
 function exitRemoteMode() {
@@ -2111,7 +2134,13 @@ function exitRemoteMode() {
   if (netPeer) { netPeer.destroy(); netPeer = null; }
   isRemoteMode = false;
   document.getElementById('remote-ui').classList.remove('active');
+  document.getElementById('rem-retry-btn').style.display = 'none';
   setRemoteStatus('', '連線中…');
+}
+
+function retryRemoteMode() {
+  const code = document.getElementById('remote-code-badge').textContent.trim();
+  if (code) initRemoteMode(code);
 }
 
 function remShowResetConfirm() {
@@ -2605,7 +2634,7 @@ function scanFromImage(event) {
     const imageData = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
     const result = jsQR(imageData.data, imageData.width, imageData.height);
     if (result) {
-      const isRoomScan = _qrScanInputId === '__remote__' || _qrScanInputId === '__viewer__';
+      const isRoomScan = _qrScanInputId === '__remote__' || _qrScanInputId === '__viewer__' || _qrScanInputId === 'join-remote-code';
       if (isRoomScan && !result.data.match(/[?&]remote=([A-Z0-9]+)/i)) {
         document.getElementById('qr-status').textContent = '⚠ 非房間 QR Code，請重新掃描';
       } else {
@@ -2670,7 +2699,7 @@ function _tickQR() {
   const img = ctx.getImageData(0, 0, outSize, outSize);
   const result = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
   if (result) {
-    const isRoomScan = _qrScanInputId === '__remote__' || _qrScanInputId === '__viewer__';
+    const isRoomScan = _qrScanInputId === '__remote__' || _qrScanInputId === '__viewer__' || _qrScanInputId === 'join-remote-code';
     if (isRoomScan && !result.data.match(/[?&]remote=([A-Z0-9]+)/i)) {
       document.getElementById('qr-status').textContent = '⚠ 非房間 QR Code，請重新掃描';
       setTimeout(() => {
@@ -2700,7 +2729,7 @@ function stopWebQRScan() {
 }
 
 function onQRScanResult(inputId, codeParam, raw) {
-  const isRoomScan = inputId === '__remote__' || inputId === '__viewer__';
+  const isRoomScan = inputId === '__remote__' || inputId === '__viewer__' || inputId === 'join-remote-code';
   if (isRoomScan && !raw.match(/[?&]remote=([A-Z0-9]+)/i)) {
     scanQRCode(inputId, codeParam);
     setTimeout(() => {
