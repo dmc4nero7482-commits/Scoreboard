@@ -1,5 +1,5 @@
 {
-  "version": "1.0.2",
-  "download": "https://github.com/dmc4nero7482-commits/Scoreboard/releases/download/v1.0.2/scoreboard-debug.apk",
-  "note": "新增球員名單快選、隊伍名稱顯示與發球指示"
+  "version": "1.0.3",
+  "download": "https://github.com/dmc4nero7482-commits/Scoreboard/releases/download/v1.0.3/scoreboard-debug.apk",
+  "note": "排場整合、加入觀看、遙控介面顯示隊伍名稱、掃QR碼功能"
 }
