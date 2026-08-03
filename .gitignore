@@ -1,5 +1,7 @@
 node_modules/
-android/
 www/
-package-lock.json
 *.apk
+android/.idea/
+
+# android/ 由 android/.gitignore 處理（build/、.gradle/、local.properties 等產物已排除），
+# 原生程式碼 MainActivity.java 需納入版控，故此處不整個忽略。
