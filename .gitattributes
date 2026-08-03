@@ -1,0 +1,23 @@
+# 統一換行字元為 LF。
+# 本專案同時透過本機 Git（core.autocrlf=true，commit 時轉 LF）與
+# GitHub 網頁上傳（原封不動保留 CRLF）兩條路徑更新，若不統一，
+# 同一份內容會被視為整檔變更而產生假衝突。
+* text=auto eol=lf
+
+# 二進位檔案：禁止任何轉換
+*.png  binary
+*.jpg  binary
+*.ico  binary
+*.jar  binary
+*.apk  binary
+*.aab  binary
+*.keystore binary
+*.jks  binary
+
+# Windows 批次檔必須是 CRLF 才能正確執行
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+
+# Unix shell script 必須是 LF
+gradlew text eol=lf
+*.sh    text eol=lf
