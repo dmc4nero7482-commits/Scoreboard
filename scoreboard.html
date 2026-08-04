@@ -405,6 +405,20 @@
   #bt-dot.learning  { background: #ff9800; animation: btBlink 0.4s infinite; }
   @keyframes btBlink { 0%,100%{opacity:1} 50%{opacity:0.15} }
 
+  /* ── Wear OS 手錶遙控 ── */
+  #wear-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    margin-right: 6px;
+    vertical-align: middle;
+    flex-shrink: 0;
+    transition: background 0.3s;
+  }
+  #wear-dot.ok      { background: #4caf50; }
+  #wear-dot.pending { background: #ff9800; }
+
   .bt-map-table { width: 100%; font-size: 13px; margin: 10px 0; border-collapse: collapse; }
   .bt-map-table td { padding: 7px 6px; vertical-align: middle; border-bottom: 1px solid var(--border); }
   .bt-map-table td:first-child { width: 80px; }
@@ -1166,7 +1180,7 @@
     <h3>操作</h3>
     <div style="display:flex;flex-direction:column;gap:8px">
 <button class="btn-cancel"  onclick="closeModal('moreModal');openBtModal()"  style="text-align:left;padding:12px 16px">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:6px"><path d="M17.71 7.71L12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29 4.3-4.29zM13 5.83l1.88 1.88L13 9.59V5.83zm1.88 10.46L13 18.17v-3.76l1.88 1.88z"/></svg>藍牙遙控
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:6px"><path d="M17.71 7.71L12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29 4.3-4.29zM13 5.83l1.88 1.88L13 9.59V5.83zm1.88 10.46L13 18.17v-3.76l1.88 1.88z"/></svg><span id="bt-menu-label">藍牙遙控</span>
       </button>
       <button class="btn-cancel"  onclick="closeModal('moreModal');openNetModal()" style="text-align:left;padding:12px 16px">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:6px"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>網路遙控
@@ -1345,12 +1359,28 @@
 <div class="modal-overlay" id="btModal">
   <div class="modal">
     <h3>
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:6px"><path d="M17.71 7.71L12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29 4.3-4.29zM13 5.83l1.88 1.88L13 9.59V5.83zm1.88 10.46L13 18.17v-3.76l1.88 1.88z"/></svg>藍牙遙控
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:6px"><path d="M17.71 7.71L12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29 4.3-4.29zM13 5.83l1.88 1.88L13 9.59V5.83zm1.88 10.46L13 18.17v-3.76l1.88 1.88z"/></svg><span id="bt-modal-title">藍牙遙控</span>
     </h3>
+
+    <!-- Wear OS 手錶遙控：只有原生 App（有 window.AndroidWear）才顯示 -->
+    <div id="wear-section" style="display:none">
+      <div style="display:flex;align-items:center;margin-bottom:10px">
+        <span id="wear-dot"></span>
+        <span id="wear-status-text" style="font-size:13px">偵測中…</span>
+      </div>
+      <p style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:14px">
+        在手錶上開啟「計分板遙控」App 即可直接計分，走的是手錶與手機原本的藍牙連線，不需網路。<br>
+        <span style="color:var(--text)">點左右色塊 +1，長按 −1，▶ 計時，↺ 長按重置。</span>
+      </p>
+      <button class="btn-confirm" onclick="refreshWear()" style="width:100%;margin-bottom:6px">重新偵測手錶</button>
+    </div>
+
+    <!-- 一般 BLE 按鈕（Chrome 網頁版限定，WebView 沒有 Web Bluetooth） -->
+    <div id="ble-section">
     <p id="bt-info">
-      支援藍牙 BLE 裝置（智慧型手錶、遙控按鈕等）。<br>
+      支援藍牙 BLE 裝置（遙控快門鈕、HM-10 模組等）。<br>
       連線後使用「學習」模式指定每顆按鍵的功能。<br>
-      <span style="color:#ef9a9a;font-size:11px">⚠ 需使用 Chrome 瀏覽器，iOS 不支援</span>
+      <span style="color:#ef9a9a;font-size:11px">⚠ 需使用 Chrome 瀏覽器開啟網頁版，App 內與 iOS 不支援</span>
     </p>
 
     <div id="bt-learn-hint">請在裝置上按下要指定的按鍵…</div>
@@ -1397,6 +1427,7 @@
         </tbody>
       </table>
     </div>
+    </div><!-- /#ble-section -->
 
     <div class="modal-row" style="margin-top:8px">
       <button class="btn-cancel" onclick="closeModal('btModal')">關閉</button>
@@ -1483,6 +1514,9 @@ function toggleTimer() {
     timerInterval = setInterval(renderTimer, 500);
   }
   renderTimer();
+  // renderTimer() 每 500ms 跑一次，不能在裡面廣播；改在切換時推一次，
+  // 遙控器與手錶各自用 timerMs + timerRunning 在本機續跑。
+  broadcastState();
 }
 function renderTimer() {
   const ms = state.timerRunning ? state.timerMs + (Date.now() - state.timerStart) : state.timerMs;
@@ -1501,6 +1535,7 @@ function resetTimer() {
   state.timerMs = 0;
   state.timerStart = null;
   renderTimer();
+  broadcastState();
 }
 
 // ── Scoring ──
@@ -2050,9 +2085,8 @@ function handleNetCmd(cmd) {
   broadcastState();
 }
 
-function broadcastState() {
-  if (!netRemoteConns.length) return;
-  const payload = {
+function buildStatePayload() {
+  return {
     type: 'state',
     scoreA: state.scoreA,
     scoreB: state.scoreB,
@@ -2065,7 +2099,13 @@ function broadcastState() {
     nameB: state.nameB,
     matchTitle: document.getElementById('match-title').textContent,
   };
+}
+
+// 同一份狀態同時餵給網路遙控／觀看端與手錶，兩條通道互不影響。
+function broadcastState() {
+  const payload = buildStatePayload();
   netRemoteConns.forEach(conn => { if (conn.open) conn.send(payload); });
+  pushWearState(payload);
 }
 
 function openNetModal() {
@@ -2169,6 +2209,99 @@ function sendRemoteCmd(cmd) {
   } else {
     setRemoteStatus('err', '未連線');
   }
+}
+
+// ── Wear OS 手錶遙控 ──
+// 手錶端是 :wear 模組的獨立 App，透過 Wearable Data Layer（手錶與手機原本那條系統級
+// 藍牙通道）收送訊息；原生橋接在 MainActivity.WearBridge / onWearCmd。
+// 網頁版沒有 window.AndroidWear，整段自動停用。
+const WEAR_ACTIVE_MS = 60000;   // 最近一次收到手錶指令算「遙控中」的時間窗
+
+const wear = {
+  available: false,   // 跑在原生 App 內且有 Google Play 服務
+  nodes: 0,           // 已配對且連線中的手錶數（不代表手錶 App 已開啟）
+  lastCmdAt: 0,       // 最近一次收到手錶指令的時間
+};
+
+function initWear() {
+  if (typeof AndroidWear === 'undefined') return;
+  try { wear.available = AndroidWear.isAvailable(); } catch(e) { wear.available = false; }
+
+  // 原生 App 內 Web Bluetooth 一定不存在，把選單改成手錶語意，避免使用者去點沒用的功能
+  const menuLabel = document.getElementById('bt-menu-label');
+  const modalTitle = document.getElementById('bt-modal-title');
+  if (menuLabel) menuLabel.textContent = '手錶遙控';
+  if (modalTitle) modalTitle.textContent = '手錶遙控';
+
+  if (!wear.available) { renderWearStatus(); return; }
+  try { AndroidWear.refreshNodes(); } catch(e) {}
+  setInterval(renderWearStatus, 10000);
+  renderWearStatus();
+}
+
+// 由原生端呼叫：收到手錶送來的指令
+function onWearCmd(cmd) {
+  wear.lastCmdAt = Date.now();
+  if (cmd === 'hello') pushWearState();   // 手錶剛開啟，回一份目前比分
+  else handleNetCmd(cmd);                 // 與網路遙控共用同一套指令處理（內部已會 broadcastState）
+  renderWearStatus();
+}
+
+// 由原生端呼叫：已連線手錶數量
+function onWearNodes(n) {
+  wear.nodes = n | 0;
+  renderWearStatus();
+}
+
+function pushWearState(payload) {
+  if (!wear.available) return;
+  const p = payload || buildStatePayload();
+  try {
+    AndroidWear.pushState(JSON.stringify({
+      scoreA: p.scoreA, scoreB: p.scoreB,
+      setsA: p.setsA, setsB: p.setsB,
+      currentSet: p.currentSet,
+      nameA: p.nameA, nameB: p.nameB,
+      timerRunning: p.timerRunning, timerMs: p.timerMs,
+    }));
+  } catch(e) {}
+}
+
+function wearActive() {
+  return wear.available && (Date.now() - wear.lastCmdAt) < WEAR_ACTIVE_MS;
+}
+
+function refreshWear() {
+  if (typeof AndroidWear === 'undefined') return;
+  try { AndroidWear.refreshNodes(); } catch(e) {}
+  pushWearState();
+}
+
+function renderWearStatus() {
+  const section = document.getElementById('wear-section');
+  const bleSection = document.getElementById('ble-section');
+  const nativeWear = typeof AndroidWear !== 'undefined';
+  if (section) section.style.display = nativeWear ? '' : 'none';
+  if (bleSection) bleSection.style.display = nativeWear ? 'none' : '';
+  if (!nativeWear) return;
+
+  let cls = '', text;
+  if (!wear.available) {
+    text = '此裝置無 Google Play 服務，無法使用手錶遙控';
+  } else if (wearActive()) {
+    cls = 'ok';  text = '手錶遙控中';
+  } else if (wear.nodes > 0) {
+    cls = 'pending';
+    text = `已連線 ${wear.nodes} 支手錶，請在手錶上開啟遙控 App`;
+  } else {
+    text = '找不到已連線的手錶';
+  }
+
+  const dot = document.getElementById('wear-dot');
+  const txt = document.getElementById('wear-status-text');
+  if (dot) dot.className = cls;
+  if (txt) txt.textContent = text;
+  renderBtTopbar();
 }
 
 // ── Bluetooth ──
@@ -2297,7 +2430,7 @@ function actionLabel(key) {
 }
 
 function renderBtStatus() {
-  const connected = bt.device && bt.device.gatt.connected;
+  const connected = (bt.device && bt.device.gatt.connected) || wearActive();
   const dot = document.getElementById('bt-dot');
   const btn = document.getElementById('bt-topbar-btn');
   if (dot) dot.className = connected ? 'connected' : '';
@@ -2331,6 +2464,8 @@ function renderBtModal() {
 
 function openBtModal() {
   renderBtModal();
+  refreshWear();
+  renderWearStatus();
   openModal('btModal');
 }
 
@@ -2827,7 +2962,7 @@ function _updateViewer(d) {
 }
 
 // ── App update check ──────────────────────────────────────
-const APP_VERSION = '1.0.3';
+const APP_VERSION = '1.0.4';
 const VERSION_URL = 'https://dmc4nero7482-commits.github.io/Scoreboard/version.json';
 
 function isNewerVersion(serverVer, currentVer) {
@@ -2933,7 +3068,7 @@ function openSetHistory() {
 function renderBtTopbar() {
   const btn = document.getElementById('bt-topbar-btn');
   const dot = document.getElementById('bt-dot');
-  const connected = bt.device && bt.device.gatt.connected;
+  const connected = (bt.device && bt.device.gatt.connected) || wearActive();
   if (dot) dot.style.cssText = `display:inline-block;width:6px;height:6px;border-radius:50%;background:${connected ? '#4caf50' : 'transparent'};margin-right:2px;vertical-align:middle`;
   if (btn) btn.classList.toggle('active', connected);
 }
@@ -2983,6 +3118,7 @@ if (_viewCode) {
   render();
   renderTimer();
   renderBtStatus();
+  initWear();
   initSwipeGestures();
   requestWakeLock();
   checkTutorial();

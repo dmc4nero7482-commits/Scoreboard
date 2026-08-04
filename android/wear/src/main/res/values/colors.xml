@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 與計分板主畫面同一組配色 -->
+    <color name="sb_bg">#0D1B2A</color>
+    <color name="sb_text">#E0E6F0</color>
+    <color name="sb_muted">#8899AA</color>
+    <color name="sb_a">#E53935</color>
+    <color name="sb_b">#1E88E5</color>
+    <color name="sb_ctrl">#1E3A5F</color>
+</resources>

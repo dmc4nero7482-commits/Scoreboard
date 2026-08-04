@@ -7,8 +7,8 @@ android {
         applicationId "com.twsa.scoreboard"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 2
-        versionName "1.0.1"
+        versionCode rootProject.ext.sbVersionCode
+        versionName rootProject.ext.sbVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,6 +16,22 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // ── 簽章 ──
+    // 手機與手錶兩個 APK 必須用同一把金鑰簽，Wearable Data Layer 才會把兩者視為同一組 App。
+    // 有設 ANDROID_KEYSTORE_PATH 環境變數時（CI）就用共用金鑰，簽章跨次建置保持一致；
+    // 沒設就退回各機器的預設 debug keystore（本機開發用）。
+    signingConfigs {
+        debug {
+            def ksPath = System.getenv("ANDROID_KEYSTORE_PATH")
+            if (ksPath) {
+                storeFile file(ksPath)
+                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
@@ -46,6 +62,33 @@ dependencies {
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
     implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
+    // Wear OS 手錶遙控（Wearable Data Layer）— 對應 :wear 模組
+    implementation 'com.google.android.gms:play-services-wearable:18.1.0'
+}
+
+// ── 把網頁資產複製進 assets/public ──
+// 正常 Capacitor 流程是 `npx cap copy android`（來源為 capacitor.config.json 的
+// webDir，也就是 www/），但本專案不依賴 node，改由 gradle 在 preBuild 前直接從
+// 專案根目錄複製那幾個網頁檔。好處是根目錄那份就是唯一來源，不必再維護一份
+// www/ 手改變體，也不會發生「改了 HTML 卻包到舊網頁」。
+//
+// 用 Copy 而非 Sync：Sync 會刪掉目的端多出來的檔，那會連 Capacitor 產生的
+// cordova.js / cordova_plugins.js 一起刪掉（根目錄沒有這兩個檔）。
+tasks.register('copyWebAssets', Copy) {
+    description = '把根目錄的網頁資產複製進 assets/public（取代 npx cap copy）'
+    from(rootProject.file('..')) {
+        include 'index.html'
+        include 'scoreboard.html'
+        include 'manifest.json'
+        include 'icon.svg'
+    }
+    into file('src/main/assets/public')
+}
+
+tasks.configureEach { t ->
+    if (t.name == 'preBuild') {
+        t.dependsOn 'copyWebAssets'
+    }
 }
 
 apply from: 'capacitor.build.gradle'

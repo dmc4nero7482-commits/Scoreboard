@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.wear.widget.BoxInsetLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/sb_bg">
+
+    <!-- boxedEdges="all" 讓內容縮進圓形錶面的內接正方形，圓錶方錶都不會被切到 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        app:boxedEdges="all">
+
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="連線中…"
+            android:textColor="@color/sb_muted"
+            android:textSize="10sp"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:paddingBottom="2dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:id="@+id/panelA"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@drawable/bg_team_a"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvNameA"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:text="A"
+                    android:textColor="#CCFFFFFF"
+                    android:textSize="11sp" />
+
+                <TextView
+                    android:id="@+id/tvScoreA"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0"
+                    android:textColor="#FFFFFFFF"
+                    android:textSize="38sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <View
+                android:layout_width="4dp"
+                android:layout_height="match_parent" />
+
+            <LinearLayout
+                android:id="@+id/panelB"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@drawable/bg_team_b"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvNameB"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:text="B"
+                    android:textColor="#CCFFFFFF"
+                    android:textSize="11sp" />
+
+                <TextView
+                    android:id="@+id/tvScoreB"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0"
+                    android:textColor="#FFFFFFFF"
+                    android:textSize="38sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingTop="4dp">
+
+            <TextView
+                android:id="@+id/tvSets"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:text="第1局  0:0"
+                android:textColor="@color/sb_muted"
+                android:textSize="11sp" />
+
+            <TextView
+                android:id="@+id/tvTimer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingEnd="6dp"
+                android:paddingRight="6dp"
+                android:text="00:00"
+                android:textColor="@color/sb_muted"
+                android:textSize="11sp"
+                android:typeface="monospace" />
+
+            <TextView
+                android:id="@+id/btnTimer"
+                android:layout_width="34dp"
+                android:layout_height="26dp"
+                android:background="@drawable/bg_ctrl"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:text="▶"
+                android:textColor="@color/sb_text"
+                android:textSize="12sp" />
+
+            <View
+                android:layout_width="4dp"
+                android:layout_height="1dp" />
+
+            <TextView
+                android:id="@+id/btnReset"
+                android:layout_width="34dp"
+                android:layout_height="26dp"
+                android:background="@drawable/bg_ctrl"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:text="↺"
+                android:textColor="@color/sb_text"
+                android:textSize="13sp" />
+        </LinearLayout>
+    </LinearLayout>
+</androidx.wear.widget.BoxInsetLayout>

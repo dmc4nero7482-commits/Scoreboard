@@ -1,4 +1,9 @@
 ext {
+    // ── App 版本（:app 與 :wear 共用同一組，避免兩邊漂移）──
+    // 改版時只改這裡，另外記得同步 version.json 與 scoreboard.html 的 APP_VERSION
+    sbVersionCode = 4
+    sbVersionName = '1.0.4'
+
     minSdkVersion = 22
     compileSdkVersion = 34
     targetSdkVersion = 34

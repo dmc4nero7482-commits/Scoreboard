@@ -1,0 +1,173 @@
+name: Build APK
+
+# 推 v* tag（例如 v1.0.4）就自動建置手機與手錶兩個 APK 並發佈 Release。
+# 也可以在 Actions 頁面手動觸發，只建置不發佈，用來確認改動有沒有弄壞建置。
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write   # 建立 Release 需要
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── 版本號一致性檢查 ────────────────────────────────────────
+      # 版本號散在 4 個地方，過去就漂移過（gradle 1.0.1 / version.json 1.0.3）。
+      # 在建置前先擋下來，比事後發現使用者收不到更新划算。
+      - name: 檢查版本號是否一致
+        run: |
+          GRADLE_V=$(grep -oP "sbVersionName\s*=\s*'\K[^']+" android/variables.gradle)
+          JSON_V=$(grep -oP '"version"\s*:\s*"\K[^"]+' version.json)
+          HTML_V=$(grep -oP "APP_VERSION = '\K[^']+" scoreboard.html)
+          echo "variables.gradle : $GRADLE_V"
+          echo "version.json     : $JSON_V"
+          echo "scoreboard.html  : $HTML_V"
+          fail=0
+          for v in "$JSON_V" "$HTML_V"; do
+            [ "$v" = "$GRADLE_V" ] || fail=1
+          done
+          if [ "$fail" = 1 ]; then
+            echo "::error::版本號不一致，請對齊後再發版"
+            exit 1
+          fi
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            TAG_V="${GITHUB_REF#refs/tags/v}"
+            if [ "$TAG_V" != "$GRADLE_V" ]; then
+              echo "::error::tag 是 v$TAG_V，但專案版本號是 $GRADLE_V"
+              exit 1
+            fi
+          fi
+          echo "版本號一致：$GRADLE_V"
+
+      # ── 建置環境 ───────────────────────────────────────────────
+      - name: 安裝 JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: 安裝 Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: 安裝所需 SDK 套件
+        run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
+
+      # ── 網頁資產 ───────────────────────────────────────────────
+      # gradle 的 copyWebAssets task 已經會做這件事，這裡先跑一次只是為了在
+      # 建置前就能檢查檔案齊不齊，失敗訊息比 gradle 的更清楚。
+      #
+      # 注意：刻意不刪目錄再重建。cordova.js / cordova_plugins.js 是 Capacitor
+      # 產生的、根目錄沒有的檔，它們由 checkout 帶進來，刪掉就補不回來了。
+      - name: 複製網頁資產到 Android 專案
+        run: |
+          mkdir -p android/app/src/main/assets/public
+          cp index.html scoreboard.html manifest.json icon.svg \
+             android/app/src/main/assets/public/
+          ls -la android/app/src/main/assets/public
+          for f in cordova.js cordova_plugins.js scoreboard.html index.html manifest.json icon.svg; do
+            if [ ! -e "android/app/src/main/assets/public/$f" ]; then
+              echo "::error::assets/public 缺少 $f"
+              exit 1
+            fi
+          done
+
+      # ── 簽章 ───────────────────────────────────────────────────
+      # 沒設 secret 也能建置，但 Android Gradle Plugin 會即時產生一把隨機
+      # debug 金鑰，導致每次發版簽章都不同 —— 使用者升級時得先移除舊版。
+      # 設定方式見 .github/workflows/README-signing.md
+      - name: 準備共用簽章金鑰
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/scoreboard.jks"
+            echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/scoreboard.jks" >> "$GITHUB_ENV"
+            echo "已載入共用簽章金鑰"
+          else
+            echo "::warning::未設定 ANDROID_KEYSTORE_BASE64，本次使用隨機 debug 金鑰。每次建置簽章都會不同，使用者升級前需先移除舊版 App。"
+          fi
+
+      # ── 建置 ───────────────────────────────────────────────────
+      - name: 建置兩個 APK
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew :app:assembleDebug :wear:assembleDebug --no-daemon --stacktrace
+
+      # ── 驗證 ───────────────────────────────────────────────────
+      # 簽章不同時手錶與手機不會連線，而且不會有任何錯誤訊息，只會安靜地
+      # 收不到指令。這是最容易在正式版才爆掉的坑，所以在 CI 直接擋。
+      - name: 驗證兩個 APK 簽章與 applicationId 一致
+        run: |
+          BT="$ANDROID_HOME/build-tools/34.0.0"
+          PHONE=android/app/build/outputs/apk/debug/scoreboard-debug.apk
+          WATCH=android/wear/build/outputs/apk/debug/scoreboard-wear-debug.apk
+
+          P_CERT=$("$BT/apksigner" verify --print-certs "$PHONE" | grep -m1 'SHA-256 digest')
+          W_CERT=$("$BT/apksigner" verify --print-certs "$WATCH" | grep -m1 'SHA-256 digest')
+          echo "手機簽章: $P_CERT"
+          echo "手錶簽章: $W_CERT"
+          if [ "$P_CERT" != "$W_CERT" ]; then
+            echo "::error::兩個 APK 簽章不同，Wearable Data Layer 不會連線"
+            exit 1
+          fi
+
+          P_ID=$("$BT/aapt" dump badging "$PHONE" | grep -oP "package: name='\K[^']+")
+          W_ID=$("$BT/aapt" dump badging "$WATCH" | grep -oP "package: name='\K[^']+")
+          echo "手機 applicationId: $P_ID"
+          echo "手錶 applicationId: $W_ID"
+          if [ "$P_ID" != "$W_ID" ]; then
+            echo "::error::兩個 APK 的 applicationId 不同，Data Layer 不會連線"
+            exit 1
+          fi
+
+          if ! "$BT/aapt" dump badging "$WATCH" | grep -q "hardware.type.watch"; then
+            echo "::error::手錶 APK 缺少 android.hardware.type.watch"
+            exit 1
+          fi
+          echo "簽章、applicationId、手錶標記皆正確"
+
+      - name: 確認手機 APK 已含最新網頁
+        run: |
+          unzip -p android/app/build/outputs/apk/debug/scoreboard-debug.apk \
+            assets/public/scoreboard.html > /tmp/packaged.html
+          for s in 'function onWearCmd' 'AndroidWear.pushState' 'function buildStatePayload'; do
+            if grep -qF "$s" /tmp/packaged.html; then
+              echo "OK   $s"
+            else
+              echo "::error::APK 內的網頁缺少 $s，www 複製可能失敗"
+              exit 1
+            fi
+          done
+
+      # ── 產出 ───────────────────────────────────────────────────
+      - name: 上傳建置產物
+        uses: actions/upload-artifact@v4
+        with:
+          name: scoreboard-apk
+          path: |
+            android/app/build/outputs/apk/debug/scoreboard-debug.apk
+            android/wear/build/outputs/apk/debug/scoreboard-wear-debug.apk
+          if-no-files-found: error
+
+      - name: 發佈 Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            android/app/build/outputs/apk/debug/scoreboard-debug.apk
+            android/wear/build/outputs/apk/debug/scoreboard-wear-debug.apk

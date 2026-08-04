@@ -1,0 +1,8 @@
+{
+	"appId": "com.twsa.scoreboard",
+	"appName": "羽球計分板",
+	"webDir": "www",
+	"server": {
+		"androidScheme": "https"
+	}
+}

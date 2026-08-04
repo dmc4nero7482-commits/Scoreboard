@@ -90,12 +90,23 @@ lint/tmp/
 *.hprof
 
 # Cordova plugins for Capacitor
-capacitor-cordova-android-plugins
+# 只忽略建置產出；模組本身（5 個小檔，共 11K）必須進版控，因為 settings.gradle
+# 有 include ':capacitor-cordova-android-plugins'，少了它 gradle 建置直接失敗。
+capacitor-cordova-android-plugins/build/
 
 # Copied web assets
-app/src/main/assets/public
+# 網頁本體由 gradle 的 copyWebAssets task 從專案根目錄複製進來（見 app/build.gradle）。
+# 但 cordova.js / cordova_plugins.js 是 Capacitor 產生的、根目錄沒有的檔
+# （本專案無 cordova plugin，兩個都是 0 byte），若不進版控，CI 從乾淨 checkout
+# 建置出的 APK 就會缺這兩個檔，所以在此例外放行。
+app/src/main/assets/public/*
+!app/src/main/assets/public/cordova.js
+!app/src/main/assets/public/cordova_plugins.js
 
 # Generated Config files
-app/src/main/assets/capacitor.config.json
-app/src/main/assets/capacitor.plugins.json
-app/src/main/res/xml/config.xml
+# 這三個檔由 npx cap sync 產生。本專案的 CI 不跑 node（只做網頁複製後直接 gradle
+# 建置），所以必須進版控。日後新增／移除 Capacitor plugin 後，記得跑 npx cap sync
+# 並把這三個檔的變更一起 commit。
+#   app/src/main/assets/capacitor.config.json
+#   app/src/main/assets/capacitor.plugins.json
+#   app/src/main/res/xml/config.xml

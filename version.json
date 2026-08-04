@@ -1,5 +1,5 @@
 {
-  "version": "1.0.3",
-  "download": "https://github.com/dmc4nero7482-commits/Scoreboard/releases/download/v1.0.3/scoreboard-debug.apk",
-  "note": "排場整合、加入觀看、遙控介面顯示隊伍名稱、掃QR碼功能"
+  "version": "1.0.4",
+  "download": "https://github.com/dmc4nero7482-commits/Scoreboard/releases/download/v1.0.4/scoreboard-debug.apk",
+  "note": "新增 Wear OS 手錶遙控（Galaxy Watch 4+／Pixel Watch），可直接在手錶上計分；計時器狀態改為即時同步到遙控端"
 }
