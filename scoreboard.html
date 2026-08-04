@@ -2664,6 +2664,18 @@ let _qrDragStartX = 0;
 let _qrDragStartY = 0;
 let _qrDragStartSize = 0;
 
+// 房間碼在 QR 裡有兩種形式，都是同一個 PeerJS 房號：
+//   ?remote=XXXXXX  遙控用（renderNetRoom 產生）
+//   ?view=XXXXXX    觀看用（_showShareViewModal 產生）
+// 掃碼時一律接受兩者，否則「即時觀看」自己產生的 QR 會被「加入觀看」判定為
+// 非房間 QR 而拒收。
+const ROOM_CODE_RE = /[?&](?:remote|view)=([A-Z0-9]+)/i;
+
+function extractRoomCode(raw) {
+  const m = String(raw || '').match(ROOM_CODE_RE);
+  return m ? m[1].toUpperCase() : null;
+}
+
 function _initQRFrame() {
   const w = window.innerWidth;
   const h = window.innerHeight;
@@ -2770,7 +2782,7 @@ function scanFromImage(event) {
     const result = jsQR(imageData.data, imageData.width, imageData.height);
     if (result) {
       const isRoomScan = _qrScanInputId === '__remote__' || _qrScanInputId === '__viewer__' || _qrScanInputId === 'join-remote-code';
-      if (isRoomScan && !result.data.match(/[?&]remote=([A-Z0-9]+)/i)) {
+      if (isRoomScan && !extractRoomCode(result.data)) {
         document.getElementById('qr-status').textContent = '⚠ 非房間 QR Code，請重新掃描';
       } else {
         stopWebQRScan();
@@ -2835,7 +2847,7 @@ function _tickQR() {
   const result = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
   if (result) {
     const isRoomScan = _qrScanInputId === '__remote__' || _qrScanInputId === '__viewer__' || _qrScanInputId === 'join-remote-code';
-    if (isRoomScan && !result.data.match(/[?&]remote=([A-Z0-9]+)/i)) {
+    if (isRoomScan && !extractRoomCode(result.data)) {
       document.getElementById('qr-status').textContent = '⚠ 非房間 QR Code，請重新掃描';
       setTimeout(() => {
         const s = document.getElementById('qr-status');
@@ -2865,23 +2877,31 @@ function stopWebQRScan() {
 
 function onQRScanResult(inputId, codeParam, raw) {
   const isRoomScan = inputId === '__remote__' || inputId === '__viewer__' || inputId === 'join-remote-code';
-  if (isRoomScan && !raw.match(/[?&]remote=([A-Z0-9]+)/i)) {
-    scanQRCode(inputId, codeParam);
-    setTimeout(() => {
-      const s = document.getElementById('qr-status');
-      if (s) s.textContent = '⚠ 非房間 QR Code，請重新掃描';
-    }, 300);
+
+  if (isRoomScan) {
+    // 一律用 extractRoomCode 解析，不看 codeParam。原本這裡是拿 codeParam
+    // （呼叫端一律傳 'remote'）去組 regex，所以觀看用的 ?view=XXXX 抓不到，
+    // 會 fallback 成把整個網址當房號用。
+    const code = extractRoomCode(raw);
+    if (!code) {
+      scanQRCode(inputId, codeParam);
+      setTimeout(() => {
+        const s = document.getElementById('qr-status');
+        if (s) s.textContent = '⚠ 非房間 QR Code，請重新掃描';
+      }, 300);
+      return;
+    }
+    if (inputId === '__remote__') initRemoteMode(code);
+    else if (inputId === '__viewer__') initViewerMode(code);
+    else document.getElementById(inputId).value = code;
     return;
   }
+
+  // 非房間掃描（例如球員名單等其他輸入框）維持原本行為：
+  // 抓不到指定參數時就把整段內容當值填入。
   const match = raw.match(new RegExp('[?&]' + codeParam + '=([A-Z0-9]+)', 'i'));
   const code = (match ? match[1] : raw).toUpperCase();
-  if (inputId === '__remote__') {
-    initRemoteMode(code);
-  } else if (inputId === '__viewer__') {
-    initViewerMode(code);
-  } else {
-    document.getElementById(inputId).value = code;
-  }
+  document.getElementById(inputId).value = code;
 }
 
 function openJoinViewer() {
@@ -2963,7 +2983,11 @@ function _updateViewer(d) {
 
 // ── App update check ──────────────────────────────────────
 const APP_VERSION = '1.0.4';
-const VERSION_URL = 'https://dmc4nero7482-commits.github.io/Scoreboard/version.json';
+// 直接讀 repo 上的 version.json。用 raw.githubusercontent 而非 GitHub Pages，
+// 因為 Pages 已關閉，而 raw 對公開 repo 免設定可用，且回應帶
+// Access-Control-Allow-Origin: *，WebView 的 fetch 不會被 CORS 擋。
+// 有 5 分鐘快取，呼叫端已加 ?t= 破快取。
+const VERSION_URL = 'https://raw.githubusercontent.com/dmc4nero7482-commits/Scoreboard/main/version.json';
 
 function isNewerVersion(serverVer, currentVer) {
   const s = serverVer.split('.').map(Number);
