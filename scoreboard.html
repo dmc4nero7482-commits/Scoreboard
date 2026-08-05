@@ -2928,10 +2928,17 @@ function applyExternalTeamNames(teamA, teamB) {
   render();
 }
 
+let _viewerConn = null;
+
 function stopViewerMode() {
+  // 計時器的 interval 與連線都必須自己收掉：離開觀看模式後 _updateViewer 起的
+  // 500ms interval 不會自動停，會一直在背景更新一個看不見的元素。
+  if (_viewerTimerInterval) { clearInterval(_viewerTimerInterval); _viewerTimerInterval = null; }
+  if (_viewerConn) { try { _viewerConn.close(); } catch(e) {} _viewerConn = null; }
   if (netPeer) { netPeer.destroy(); netPeer = null; }
   document.getElementById('viewer-ui').classList.remove('active');
   document.getElementById('viewer-status').textContent = '連線中…';
+  document.getElementById('viewer-timer').textContent = '00:00';
   openModal('moreModal');
 }
 
@@ -2944,6 +2951,7 @@ function initViewerMode(code) {
   netPeer = new Peer();
   netPeer.on('open', () => {
     const conn = netPeer.connect(PEER_PREFIX + code, { reliable: true });
+    _viewerConn = conn;   // 存起來，stopViewerMode 才關得掉
     conn.on('open', () => { document.getElementById('viewer-status').textContent = '已連線'; });
     conn.on('close', () => { document.getElementById('viewer-status').textContent = '已斷線'; });
     conn.on('data', data => { if (data && data.type === 'state') _updateViewer(data); });
@@ -2983,11 +2991,10 @@ function _updateViewer(d) {
 
 // ── App update check ──────────────────────────────────────
 const APP_VERSION = '1.0.4';
-// 直接讀 repo 上的 version.json。用 raw.githubusercontent 而非 GitHub Pages，
-// 因為 Pages 已關閉，而 raw 對公開 repo 免設定可用，且回應帶
-// Access-Control-Allow-Origin: *，WebView 的 fetch 不會被 CORS 擋。
-// 有 5 分鐘快取，呼叫端已加 ?t= 破快取。
-const VERSION_URL = 'https://raw.githubusercontent.com/dmc4nero7482-commits/Scoreboard/main/version.json';
+// 與觀看分享網址同一個來源（GitHub Pages）。Pages 回正確的
+// Content-Type: application/json 且帶 Access-Control-Allow-Origin: *，
+// WebView 的 fetch 不會被 CORS 擋。有 10 分鐘快取，呼叫端已加 ?t= 破快取。
+const VERSION_URL = 'https://dmc4nero7482-commits.github.io/Scoreboard/version.json';
 
 function isNewerVersion(serverVer, currentVer) {
   const s = serverVer.split('.').map(Number);
