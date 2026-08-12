@@ -45,7 +45,7 @@ public class WatchActivity extends Activity implements MessageClient.OnMessageRe
     /** 送出指令後多久沒收到狀態回應就視為手機端沒在聽 */
     private static final long ACK_TIMEOUT_MS = 3000L;
 
-    private TextView tvStatus, tvNameA, tvNameB, tvScoreA, tvScoreB, tvSets, tvTimer, btnTimer;
+    private TextView tvStatus, tvNameA, tvNameB, tvScoreA, tvScoreB, tvTimer, btnTimer;
     private View panelA, panelB, btnReset;
 
     private Vibrator vibrator;
@@ -84,7 +84,6 @@ public class WatchActivity extends Activity implements MessageClient.OnMessageRe
         tvNameB  = findViewById(R.id.tvNameB);
         tvScoreA = findViewById(R.id.tvScoreA);
         tvScoreB = findViewById(R.id.tvScoreB);
-        tvSets   = findViewById(R.id.tvSets);
         tvTimer  = findViewById(R.id.tvTimer);
         btnTimer = findViewById(R.id.btnTimer);
         btnReset = findViewById(R.id.btnReset);
@@ -170,8 +169,12 @@ public class WatchActivity extends Activity implements MessageClient.OnMessageRe
             tvScoreB.setText(String.valueOf(o.optInt("scoreB", 0)));
             tvNameA.setText(shorten(o.optString("nameA", "A")));
             tvNameB.setText(shorten(o.optString("nameB", "B")));
-            tvSets.setText(String.format(Locale.US, "第%d局  %d:%d",
+
+            // 局數比分放在上方狀態列。連線後「已連線」這三個字沒有資訊價值，
+            // 直接讓位給局數；綠點本身就表示連線正常。
+            tvStatus.setText(String.format(Locale.US, "● 第%d局  %d:%d",
                 o.optInt("currentSet", 1), o.optInt("setsA", 0), o.optInt("setsB", 0)));
+            tvStatus.setTextColor(0xFF4CAF50);
 
             timerRunning  = o.optBoolean("timerRunning", false);
             timerBaseMs   = o.optLong("timerMs", 0L);

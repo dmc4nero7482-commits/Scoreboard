@@ -105,26 +105,20 @@
             android:gravity="center_vertical"
             android:paddingTop="4dp">
 
+            <!-- 局數比分改放到上方狀態列：底部這列擠了四個元件時，
+                 在 384x384 的錶面上只剩約 28dp，「第1局 0:0」會被截成「第1…」。 -->
             <TextView
-                android:id="@+id/tvSets"
+                android:id="@+id/tvTimer"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:gravity="center_vertical"
                 android:maxLines="1"
-                android:ellipsize="end"
-                android:text="第1局  0:0"
-                android:textColor="@color/sb_muted"
-                android:textSize="11sp" />
-
-            <TextView
-                android:id="@+id/tvTimer"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
                 android:paddingEnd="6dp"
                 android:paddingRight="6dp"
                 android:text="00:00"
                 android:textColor="@color/sb_muted"
-                android:textSize="11sp"
+                android:textSize="12sp"
                 android:typeface="monospace" />
 
             <TextView
