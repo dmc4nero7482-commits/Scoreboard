@@ -264,10 +264,21 @@ public class MainActivity extends BridgeActivity {
         public void downloadAndInstall(String url, String filename) {
             File destFile = new File(getExternalFilesDir(null), filename);
 
-            debug("canInstall=" + canInstall() + " fileExists=" + destFile.exists());
+            // 沿用既有檔案前必須確認它是完整的 APK。下載失敗（例如 Release 還沒
+            // 發佈導致 404）時 DownloadManager 可能留下 0 byte 或半截的檔案，
+            // 若直接拿去安裝會變成「無法解析套件」，而且因為檔案一直在，
+            // 之後每次按更新都會重蹈覆轍。
+            boolean reusable = isCompleteApk(destFile);
+            debug("canInstall=" + canInstall() + " fileExists=" + destFile.exists()
+                + " reusable=" + reusable);
 
-            if (destFile.exists() && canInstall()) {
-                debug("已有檔案且有權限，直接安裝");
+            if (destFile.exists() && !reusable) {
+                debug("既有檔案不完整，刪除後重新下載");
+                destFile.delete();
+            }
+
+            if (reusable && canInstall()) {
+                debug("已有完整檔案且有權限，直接安裝");
                 runOnUiThread(() -> installApk(destFile.getAbsolutePath()));
                 return;
             }
@@ -300,6 +311,20 @@ public class MainActivity extends BridgeActivity {
 
             long downloadId = dm.enqueue(request);
             startProgressPolling(dm, downloadId, destFile.getAbsolutePath());
+        }
+
+        /**
+         * 檔案是否為一份完整可安裝的 APK。
+         * 用 ZipFile 開啟並確認找得到 AndroidManifest.xml —— ZipFile 必須讀到
+         * 檔案結尾的中央目錄才能建立，所以半截的下載一定會在這裡失敗。
+         */
+        private boolean isCompleteApk(File f) {
+            if (f == null || !f.exists() || f.length() <= 0) return false;
+            try (java.util.zip.ZipFile zip = new java.util.zip.ZipFile(f)) {
+                return zip.getEntry("AndroidManifest.xml") != null;
+            } catch (Exception e) {
+                return false;
+            }
         }
 
         private void debug(String msg) {
