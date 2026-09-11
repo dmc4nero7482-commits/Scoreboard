@@ -1636,6 +1636,8 @@ function undoLast() {
 // ── Prev set ──
 function prevSet() {
   if (!state.setHistory.length) return;
+  // 退回上一局代表比賽不再是結束狀態，橫幅要收掉。
+  closeWinBanner();
   const last = state.setHistory.pop();
   const winnerWasA = last.a >= last.b;
   if (winnerWasA) state.setsA = Math.max(0, state.setsA - 1);
@@ -1681,6 +1683,9 @@ function doNextSet() {
 function confirmReset() { openModal('resetModal'); }
 function resetMatch() {
   closeModal('resetModal');
+  // 比賽結束橫幅可能還開著（手錶端重置更常遇到：橫幅蓋在最上層，
+  // 底下比分已歸零卻看不出來）。歸零就代表比賽不再是結束狀態，一併收掉。
+  closeWinBanner();
   state.scoreA = 0; state.scoreB = 0;
   state.setsA = 0; state.setsB = 0;
   state.currentSet = 1;

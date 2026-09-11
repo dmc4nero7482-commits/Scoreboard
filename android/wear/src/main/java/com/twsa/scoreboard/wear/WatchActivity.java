@@ -8,6 +8,8 @@ import android.os.Looper;
 import android.os.SystemClock;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
+import android.view.GestureDetector;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.TextView;
@@ -45,8 +47,17 @@ public class WatchActivity extends Activity implements MessageClient.OnMessageRe
     /** 送出指令後多久沒收到狀態回應就視為手機端沒在聽 */
     private static final long ACK_TIMEOUT_MS = 3000L;
 
-    private TextView tvStatus, tvNameA, tvNameB, tvScoreA, tvScoreB, tvTimer, btnTimer;
-    private View panelA, panelB, btnReset;
+    /** 重置按鈕按第一下之後，等待第二下確認的時間 */
+    private static final long RESET_ARM_MS = 3000L;
+
+    /** 判定為上下滑動所需的最小垂直位移（24dp 換算成 px，onCreate 時算好） */
+    private int flingMinDistancePx;
+
+    /** 重置按鈕是否已進入待確認狀態 */
+    private boolean resetArmed = false;
+
+    private TextView tvStatus, tvNameA, tvNameB, tvScoreA, tvScoreB, tvTimer, btnTimer, btnReset;
+    private View panelA, panelB;
 
     private Vibrator vibrator;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -58,6 +69,13 @@ public class WatchActivity extends Activity implements MessageClient.OnMessageRe
     private boolean timerRunning = false;
     private long timerBaseMs = 0L;
     private long timerSyncedAt = 0L;
+
+    private final Runnable disarmReset = new Runnable() {
+        @Override public void run() {
+            resetArmed = false;
+            btnReset.setText("↺");
+        }
+    };
 
     private final Runnable ackTimeout = () -> {
         if (!linked) setStatus("手機未開啟計分板", false);
@@ -78,6 +96,7 @@ public class WatchActivity extends Activity implements MessageClient.OnMessageRe
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+        flingMinDistancePx = Math.round(24f * getResources().getDisplayMetrics().density);
 
         tvStatus = findViewById(R.id.tvStatus);
         tvNameA  = findViewById(R.id.tvNameA);
@@ -90,18 +109,57 @@ public class WatchActivity extends Activity implements MessageClient.OnMessageRe
         panelA   = findViewById(R.id.panelA);
         panelB   = findViewById(R.id.panelB);
 
-        // 點一下 +1，長按 −1
-        panelA.setOnClickListener(v -> sendCmd("scoreA", 30));
-        panelB.setOnClickListener(v -> sendCmd("scoreB", 30));
-        panelA.setOnLongClickListener(v -> { sendCmd("unscoreA", 60); return true; });
-        panelB.setOnLongClickListener(v -> { sendCmd("unscoreB", 60); return true; });
+        // 計分：點一下 +1、往上滑 +1、往下滑 −1、長按 −1。
+        // 滑動是實際比賽時最順手的動作（手指不必瞄準，划過去就好），
+        // 點按與長按保留下來，戴手套或手濕時比較好按。
+        attachScoreGestures(panelA, "scoreA", "unscoreA");
+        attachScoreGestures(panelB, "scoreB", "unscoreB");
 
         btnTimer.setOnClickListener(v -> sendCmd("timer", 30));
 
-        // 重置只認長按，避免比賽中誤觸把分數清掉
-        btnReset.setOnClickListener(v ->
-            Toast.makeText(this, "長按重置比賽", Toast.LENGTH_SHORT).show());
-        btnReset.setOnLongClickListener(v -> { sendCmd("resetConfirmed", 120); return true; });
+        // 重置要防誤觸，但長按在手錶上很不好按（手指得穩穩壓住小按鈕）。
+        // 改成點兩下：第一下進入待確認並顯示 ✓，RESET_ARM_MS 內再點一下才真的送出。
+        btnReset.setOnClickListener(v -> {
+            if (resetArmed) {
+                handler.removeCallbacks(disarmReset);
+                disarmReset.run();
+                sendCmd("resetConfirmed", 120);
+            } else {
+                resetArmed = true;
+                btnReset.setText("✓");
+                vibrate(20);
+                Toast.makeText(this, "再按一次重置比賽", Toast.LENGTH_SHORT).show();
+                handler.postDelayed(disarmReset, RESET_ARM_MS);
+            }
+        });
+    }
+
+    /**
+     * 把「點＝加分、上滑＝加分、下滑＝減分、長按＝減分」綁到一個計分色塊上。
+     *
+     * onTouch 回傳 false，事件才會繼續交給 View 自己的點擊／長按處理；
+     * 手指滑超過 touch slop 時 View 本來就不會再判定為點擊，所以滑動不會重複計分。
+     */
+    private void attachScoreGestures(View panel, String addCmd, String subCmd) {
+        final GestureDetector detector = new GestureDetector(this,
+            new GestureDetector.SimpleOnGestureListener() {
+                @Override
+                public boolean onFling(MotionEvent down, MotionEvent up, float vx, float vy) {
+                    if (down == null || up == null) return false;
+                    float dy = up.getY() - down.getY();
+                    float dx = up.getX() - down.getX();
+                    // 垂直位移要夠大、而且明顯比水平大，才算加減分。
+                    // 水平滑動留給 Wear OS 的滑動返回手勢，不要搶。
+                    if (Math.abs(dy) < flingMinDistancePx || Math.abs(dy) <= Math.abs(dx)) return false;
+                    if (dy < 0) sendCmd(addCmd, 30);
+                    else        sendCmd(subCmd, 60);
+                    return true;
+                }
+            });
+
+        panel.setOnClickListener(v -> sendCmd(addCmd, 30));
+        panel.setOnLongClickListener(v -> { sendCmd(subCmd, 60); return true; });
+        panel.setOnTouchListener((v, e) -> { detector.onTouchEvent(e); return false; });
     }
 
     @Override
@@ -121,6 +179,7 @@ public class WatchActivity extends Activity implements MessageClient.OnMessageRe
         Wearable.getMessageClient(this).removeListener(this);
         handler.removeCallbacks(ackTimeout);
         handler.removeCallbacks(timerTick);
+        handler.removeCallbacks(disarmReset);
     }
 
     // ── 送指令給手機 ──────────────────────────────────────────
@@ -131,6 +190,7 @@ public class WatchActivity extends Activity implements MessageClient.OnMessageRe
 
         Wearable.getNodeClient(this).getConnectedNodes()
             .addOnSuccessListener(nodes -> {
+                android.util.Log.d("WEAR", "sendCmd " + cmd + " -> " + (nodes == null ? 0 : nodes.size()) + " node(s)");
                 if (nodes == null || nodes.isEmpty()) {
                     linked = false;
                     setStatus("找不到已配對手機", false);
@@ -154,6 +214,7 @@ public class WatchActivity extends Activity implements MessageClient.OnMessageRe
     public void onMessageReceived(MessageEvent event) {
         if (!PATH_STATE.equals(event.getPath())) return;
         final String json = new String(event.getData(), StandardCharsets.UTF_8);
+        android.util.Log.d("WEAR", "收到狀態 " + json.length() + " bytes");
         runOnUiThread(() -> {
             handler.removeCallbacks(ackTimeout);
             linked = true;

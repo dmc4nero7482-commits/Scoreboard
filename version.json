@@ -1,5 +1,5 @@
 {
   "version": "1.0.5",
   "download": "https://github.com/dmc4nero7482-commits/Scoreboard/releases/download/v1.0.5/scoreboard-debug.apk",
-  "note": "放大手錶端的計時／重置按鈕（34×26dp → 44×40dp），在實體錶上用手指按不易失手"
+  "note": "手錶端：計時／重置按鈕放大，改為上滑加分、下滑減分，重置從長按改成點兩下確認；修正手錶收不到比分更新、以及重置比賽後勝利橫幅不會消失的問題"
 }

@@ -46,6 +46,8 @@ public class MainActivity extends BridgeActivity {
     private MessageClient.OnMessageReceivedListener wearListener = null;
     private final List<String> wearNodeIds = new ArrayList<>();
     private long wearNodesFetchedAt = 0L;
+    /** 最近送指令過來的手錶節點，狀態回覆一律以它兜底 */
+    private volatile String lastWearSenderId = null;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -58,6 +60,7 @@ public class MainActivity extends BridgeActivity {
 
         wearListener = messageEvent -> {
             if (!WEAR_PATH_CMD.equals(messageEvent.getPath())) return;
+            lastWearSenderId = messageEvent.getSourceNodeId();
             String raw = new String(messageEvent.getData(), StandardCharsets.UTF_8);
             // 指令來自我們自己的手錶 App，但仍過濾成純字母，避免任何字串被塞進 evaluateJavascript
             final String cmd = raw.replaceAll("[^A-Za-z]", "");
@@ -204,6 +207,12 @@ public class MainActivity extends BridgeActivity {
                 targets = new ArrayList<>(wearNodeIds);
                 stale = SystemClock.elapsedRealtime() - wearNodesFetchedAt > WEAR_NODES_TTL_MS;
             }
+            // 一定要回覆給「剛剛送指令來的那支手錶」。getConnectedNodes() 是非同步的，
+            // 在它回來之前（或偶爾回空清單時）targets 會是空的，狀態就靜悄悄地送不出去，
+            // 症狀是手錶能單向遙控、但分數永遠停在 0。以來源節點兜底，回覆路徑就不依賴快取。
+            final String sender = lastWearSenderId;
+            if (sender != null && !targets.contains(sender)) targets.add(sender);
+            android.util.Log.d("WEAR", "pushState -> " + targets.size() + " node(s), sender=" + sender);
             if (stale) runOnUiThread(MainActivity.this::refreshWearNodes);
             for (String nodeId : targets) {
                 try {
