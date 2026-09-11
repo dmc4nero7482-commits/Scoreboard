@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 計分色塊內的 −1 按鈕：半透明黑色藥丸，與手機版 .btn-deduct 同一個樣子 -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="#55FFFFFF">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#00000066" />
+            <corners android:radius="20dp" />
+        </shape>
+    </item>
+</ripple>

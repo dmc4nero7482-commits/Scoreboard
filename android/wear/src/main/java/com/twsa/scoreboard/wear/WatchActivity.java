@@ -5,7 +5,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.SystemClock;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.view.GestureDetector;
@@ -23,7 +22,6 @@ import com.google.android.gms.wearable.Wearable;
 import org.json.JSONObject;
 
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.Locale;
 
 /**
@@ -32,12 +30,15 @@ import java.util.Locale;
  * 通訊走 Wearable Data Layer 的 MessageClient，也就是手錶與手機之間那條系統級藍牙通道，
  * 配對、重連、重試都由 Google Play 服務處理，App 不需要自己碰 GATT 或 RFCOMM。
  *
- *   手錶 → 手機   path = /sb/cmd     payload = 指令字串（scoreA、unscoreB、timer …）
+ *   手錶 → 手機   path = /sb/cmd     payload = 指令字串（scoreA、unscoreB、resetConfirmed）
  *   手機 → 手錶   path = /sb/state   payload = 比分 JSON
  *
  * 手機端沒有註冊 WearableListenerService，指令只有在計分板 App 位於前景時才會被接收，
  * 這正是實際使用情境（裁判把手機放在場邊、畫面亮著）。手錶收不到 /sb/state 回應時
  * 會顯示「手機未開啟」，避免使用者以為按了有作用。
+ *
+ * 計時刻意不放在手錶上：一場比賽只按一兩次，卻要吃掉錶面寶貴的一整列。留在手機端操作，
+ * 手錶只負責最高頻的加減分，外加一顆重置。
  */
 public class WatchActivity extends Activity implements MessageClient.OnMessageReceivedListener {
 
@@ -56,7 +57,7 @@ public class WatchActivity extends Activity implements MessageClient.OnMessageRe
     /** 重置按鈕是否已進入待確認狀態 */
     private boolean resetArmed = false;
 
-    private TextView tvStatus, tvNameA, tvNameB, tvScoreA, tvScoreB, tvTimer, btnTimer, btnReset;
+    private TextView tvStatus, tvNameA, tvNameB, tvScoreA, tvScoreB, btnMinusA, btnMinusB, btnReset;
     private View panelA, panelB;
 
     private Vibrator vibrator;
@@ -64,11 +65,6 @@ public class WatchActivity extends Activity implements MessageClient.OnMessageRe
 
     /** 是否曾經收到手機回應（收到才算真的接上計分板 App） */
     private boolean linked = false;
-
-    // 本機計時器顯示：以手機送來的基準值 + 自行推算的經過時間
-    private boolean timerRunning = false;
-    private long timerBaseMs = 0L;
-    private long timerSyncedAt = 0L;
 
     private final Runnable disarmReset = new Runnable() {
         @Override public void run() {
@@ -81,13 +77,6 @@ public class WatchActivity extends Activity implements MessageClient.OnMessageRe
         if (!linked) setStatus("手機未開啟計分板", false);
     };
 
-    private final Runnable timerTick = new Runnable() {
-        @Override public void run() {
-            renderTimer();
-            if (timerRunning) handler.postDelayed(this, 500L);
-        }
-    };
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -98,24 +87,23 @@ public class WatchActivity extends Activity implements MessageClient.OnMessageRe
         vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
         flingMinDistancePx = Math.round(24f * getResources().getDisplayMetrics().density);
 
-        tvStatus = findViewById(R.id.tvStatus);
-        tvNameA  = findViewById(R.id.tvNameA);
-        tvNameB  = findViewById(R.id.tvNameB);
-        tvScoreA = findViewById(R.id.tvScoreA);
-        tvScoreB = findViewById(R.id.tvScoreB);
-        tvTimer  = findViewById(R.id.tvTimer);
-        btnTimer = findViewById(R.id.btnTimer);
-        btnReset = findViewById(R.id.btnReset);
-        panelA   = findViewById(R.id.panelA);
-        panelB   = findViewById(R.id.panelB);
+        tvStatus  = findViewById(R.id.tvStatus);
+        tvNameA   = findViewById(R.id.tvNameA);
+        tvNameB   = findViewById(R.id.tvNameB);
+        tvScoreA  = findViewById(R.id.tvScoreA);
+        tvScoreB  = findViewById(R.id.tvScoreB);
+        btnMinusA = findViewById(R.id.btnMinusA);
+        btnMinusB = findViewById(R.id.btnMinusB);
+        btnReset  = findViewById(R.id.btnReset);
+        panelA    = findViewById(R.id.panelA);
+        panelB    = findViewById(R.id.panelB);
 
-        // 計分：點一下 +1、往上滑 +1、往下滑 −1、長按 −1。
-        // 滑動是實際比賽時最順手的動作（手指不必瞄準，划過去就好），
-        // 點按與長按保留下來，戴手套或手濕時比較好按。
+        // 加分：點色塊，或在色塊上往上滑。減分：色塊內的 −1 按鈕，或往下滑。
+        // 滑動在比賽中不必瞄準，−1 按鈕則是戴手套、手濕時比較保險的退路。
         attachScoreGestures(panelA, "scoreA", "unscoreA");
         attachScoreGestures(panelB, "scoreB", "unscoreB");
-
-        btnTimer.setOnClickListener(v -> sendCmd("timer", 30));
+        btnMinusA.setOnClickListener(v -> sendCmd("unscoreA", 60));
+        btnMinusB.setOnClickListener(v -> sendCmd("unscoreB", 60));
 
         // 重置要防誤觸，但長按在手錶上很不好按（手指得穩穩壓住小按鈕）。
         // 改成點兩下：第一下進入待確認並顯示 ✓，RESET_ARM_MS 內再點一下才真的送出。
@@ -137,8 +125,13 @@ public class WatchActivity extends Activity implements MessageClient.OnMessageRe
     /**
      * 把「點＝加分、上滑＝加分、下滑＝減分、長按＝減分」綁到一個計分色塊上。
      *
-     * onTouch 回傳 false，事件才會繼續交給 View 自己的點擊／長按處理；
-     * 手指滑超過 touch slop 時 View 本來就不會再判定為點擊，所以滑動不會重複計分。
+     * 判定成滑動時必須把事件吞掉，否則會重複計分：View 只有在手指移出「自己的範圍」
+     * 才會取消點擊，色塊很大，整段滑動都還在框內，ACTION_UP 照樣被判定成點擊 ——
+     * 下滑會變成先 −1 再 +1，等於沒作用。這是實機 log 抓出來的。
+     *
+     * 吞掉 UP 還不夠：長按是在 ACTION_DOWN 時就排進 handler 的，沒收到 UP 就不會被
+     * 取消，500ms 後照樣觸發。所以補送一個 ACTION_CANCEL 給 View，一次清掉按下狀態
+     * 與待觸發的長按。
      */
     private void attachScoreGestures(View panel, String addCmd, String subCmd) {
         final GestureDetector detector = new GestureDetector(this,
@@ -159,7 +152,14 @@ public class WatchActivity extends Activity implements MessageClient.OnMessageRe
 
         panel.setOnClickListener(v -> sendCmd(addCmd, 30));
         panel.setOnLongClickListener(v -> { sendCmd(subCmd, 60); return true; });
-        panel.setOnTouchListener((v, e) -> { detector.onTouchEvent(e); return false; });
+        panel.setOnTouchListener((v, e) -> {
+            if (!detector.onTouchEvent(e)) return false;
+            MotionEvent cancel = MotionEvent.obtain(e);
+            cancel.setAction(MotionEvent.ACTION_CANCEL);
+            v.onTouchEvent(cancel);
+            cancel.recycle();
+            return true;
+        });
     }
 
     @Override
@@ -178,7 +178,6 @@ public class WatchActivity extends Activity implements MessageClient.OnMessageRe
         super.onPause();
         Wearable.getMessageClient(this).removeListener(this);
         handler.removeCallbacks(ackTimeout);
-        handler.removeCallbacks(timerTick);
         handler.removeCallbacks(disarmReset);
     }
 
@@ -190,7 +189,8 @@ public class WatchActivity extends Activity implements MessageClient.OnMessageRe
 
         Wearable.getNodeClient(this).getConnectedNodes()
             .addOnSuccessListener(nodes -> {
-                android.util.Log.d("WEAR", "sendCmd " + cmd + " -> " + (nodes == null ? 0 : nodes.size()) + " node(s)");
+                android.util.Log.d("WEAR", "sendCmd " + cmd + " -> "
+                    + (nodes == null ? 0 : nodes.size()) + " node(s)");
                 if (nodes == null || nodes.isEmpty()) {
                     linked = false;
                     setStatus("找不到已配對手機", false);
@@ -236,26 +236,9 @@ public class WatchActivity extends Activity implements MessageClient.OnMessageRe
             tvStatus.setText(String.format(Locale.US, "● 第%d局  %d:%d",
                 o.optInt("currentSet", 1), o.optInt("setsA", 0), o.optInt("setsB", 0)));
             tvStatus.setTextColor(0xFF4CAF50);
-
-            timerRunning  = o.optBoolean("timerRunning", false);
-            timerBaseMs   = o.optLong("timerMs", 0L);
-            timerSyncedAt = SystemClock.elapsedRealtime();
-            btnTimer.setText(timerRunning ? "❚❚" : "▶");
-
-            handler.removeCallbacks(timerTick);
-            renderTimer();
-            if (timerRunning) handler.postDelayed(timerTick, 500L);
         } catch (Exception e) {
             // 狀態格式不對就維持畫面現狀，不要讓遙控器整個掛掉
         }
-    }
-
-    private void renderTimer() {
-        long ms = timerRunning
-            ? timerBaseMs + (SystemClock.elapsedRealtime() - timerSyncedAt)
-            : timerBaseMs;
-        long total = ms / 1000L;
-        tvTimer.setText(String.format(Locale.US, "%02d:%02d", total / 60, total % 60));
     }
 
     /** 手錶畫面窄，隊名超過 5 個字就截斷 */

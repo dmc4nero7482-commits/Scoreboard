@@ -13,6 +13,7 @@
         android:orientation="vertical"
         app:boxedEdges="all">
 
+        <!-- 連線狀態；連上之後改顯示「● 第N局 x:y」 -->
         <TextView
             android:id="@+id/tvStatus"
             android:layout_width="match_parent"
@@ -31,6 +32,8 @@
             android:layout_weight="1"
             android:orientation="horizontal">
 
+            <!-- 色塊本身可點：點一下或上滑 +1。−1 按鈕疊在色塊底部內側，
+                 它自己 clickable，所以點 −1 不會被色塊當成加分。 -->
             <LinearLayout
                 android:id="@+id/panelA"
                 android:layout_width="0dp"
@@ -39,8 +42,10 @@
                 android:background="@drawable/bg_team_a"
                 android:clickable="true"
                 android:focusable="true"
-                android:gravity="center"
-                android:orientation="vertical">
+                android:gravity="center_horizontal"
+                android:orientation="vertical"
+                android:paddingTop="4dp"
+                android:paddingBottom="6dp">
 
                 <TextView
                     android:id="@+id/tvNameA"
@@ -52,13 +57,33 @@
                     android:textColor="#CCFFFFFF"
                     android:textSize="11sp" />
 
+                <!-- autoSize：錶面大小差很多（192dp～234dp），固定字級不是太小就是被切，
+                     讓字級自己去填剩下的高度最省事 -->
                 <TextView
                     android:id="@+id/tvScoreA"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:gravity="center"
                     android:text="0"
                     android:textColor="#FFFFFFFF"
-                    android:textSize="38sp"
+                    android:textStyle="bold"
+                    android:autoSizeTextType="uniform"
+                    android:autoSizeMinTextSize="18sp"
+                    android:autoSizeMaxTextSize="46sp"
+                    android:autoSizeStepGranularity="1sp" />
+
+                <TextView
+                    android:id="@+id/btnMinusA"
+                    android:layout_width="52dp"
+                    android:layout_height="26dp"
+                    android:background="@drawable/bg_deduct"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:text="−1"
+                    android:textColor="#D1FFFFFF"
+                    android:textSize="13sp"
                     android:textStyle="bold" />
             </LinearLayout>
 
@@ -74,8 +99,10 @@
                 android:background="@drawable/bg_team_b"
                 android:clickable="true"
                 android:focusable="true"
-                android:gravity="center"
-                android:orientation="vertical">
+                android:gravity="center_horizontal"
+                android:orientation="vertical"
+                android:paddingTop="4dp"
+                android:paddingBottom="6dp">
 
                 <TextView
                     android:id="@+id/tvNameB"
@@ -89,65 +116,46 @@
 
                 <TextView
                     android:id="@+id/tvScoreB"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:gravity="center"
                     android:text="0"
                     android:textColor="#FFFFFFFF"
-                    android:textSize="38sp"
+                    android:textStyle="bold"
+                    android:autoSizeTextType="uniform"
+                    android:autoSizeMinTextSize="18sp"
+                    android:autoSizeMaxTextSize="46sp"
+                    android:autoSizeStepGranularity="1sp" />
+
+                <TextView
+                    android:id="@+id/btnMinusB"
+                    android:layout_width="52dp"
+                    android:layout_height="26dp"
+                    android:background="@drawable/bg_deduct"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:text="−1"
+                    android:textColor="#D1FFFFFF"
+                    android:textSize="13sp"
                     android:textStyle="bold" />
             </LinearLayout>
         </LinearLayout>
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:paddingTop="4dp">
-
-            <!-- 局數比分改放到上方狀態列：底部這列擠了四個元件時，
-                 在 384x384 的錶面上只剩約 28dp，「第1局 0:0」會被截成「第1…」。 -->
-            <TextView
-                android:id="@+id/tvTimer"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="center_vertical"
-                android:maxLines="1"
-                android:paddingEnd="6dp"
-                android:paddingRight="6dp"
-                android:text="00:00"
-                android:textColor="@color/sb_muted"
-                android:textSize="12sp"
-                android:typeface="monospace" />
-
-            <TextView
-                android:id="@+id/btnTimer"
-                android:layout_width="44dp"
-                android:layout_height="40dp"
-                android:background="@drawable/bg_ctrl"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center"
-                android:text="▶"
-                android:textColor="@color/sb_text"
-                android:textSize="12sp" />
-
-            <View
-                android:layout_width="6dp"
-                android:layout_height="1dp" />
-
-            <TextView
-                android:id="@+id/btnReset"
-                android:layout_width="44dp"
-                android:layout_height="40dp"
-                android:background="@drawable/bg_ctrl"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center"
-                android:text="↺"
-                android:textColor="@color/sb_text"
-                android:textSize="13sp" />
-        </LinearLayout>
+        <!-- 計時留在手機端操作；手錶底部只保留重置，按鈕因此可以做大一點 -->
+        <TextView
+            android:id="@+id/btnReset"
+            android:layout_width="72dp"
+            android:layout_height="36dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="5dp"
+            android:background="@drawable/bg_ctrl"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:text="↺"
+            android:textColor="@color/sb_text"
+            android:textSize="16sp" />
     </LinearLayout>
 </androidx.wear.widget.BoxInsetLayout>
