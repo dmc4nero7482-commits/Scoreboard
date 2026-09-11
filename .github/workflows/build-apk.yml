@@ -47,6 +47,19 @@ jobs:
           echo "版本號一致：$GRADLE_V"
 
       # ── 建置環境 ───────────────────────────────────────────────
+      # android/settings.gradle 會 apply capacitor.settings.gradle，後者把
+      # :capacitor-android 與 :capacitor-mlkit-barcode-scanning 指到 node_modules/ 底下。
+      # node_modules/ 沒進版控，CI 是全新 checkout，不先裝相依套件的話 Gradle 在
+      # 設定階段就找不到那兩個子專案 —— 這是這個 workflow 從第一次跑就一直失敗的原因。
+      - name: 安裝 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: 安裝 npm 相依套件
+        run: npm ci
+
       - name: 安裝 JDK 17
         uses: actions/setup-java@v4
         with:
