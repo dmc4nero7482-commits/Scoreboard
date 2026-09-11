@@ -368,9 +368,21 @@ public class MainActivity extends BridgeActivity {
 
                         if (status == DownloadManager.STATUS_SUCCESSFUL) {
                             running = false;
-                            dm.remove(downloadId);
-                            debug("STATUS_SUCCESSFUL，呼叫 installApk");
-                            runOnUiThread(() -> installApk(filePath));
+                            // 這裡絕對不能呼叫 dm.remove()。它會把下載好的檔案一併刪掉，
+                            // 即使目的地是 setDestinationUri() 指定的本 App 目錄也一樣。
+                            // 檔案沒了，安裝 Intent 照樣送得出去（debug 會一路印到
+                            // 「startActivity 完成」），但系統安裝程式讀到的是空檔，
+                            // 只會回「應用程式的檔案發生問題」—— 看起來像 APK 壞掉，
+                            // 其實是我們自己刪的。DownloadManager 裡留下的那筆記錄無害，
+                            // 檔案本身在下次更新時會被 downloadAndInstall() 覆蓋。
+                            File apkOnDisk = new File(filePath);
+                            if (!isCompleteApk(apkOnDisk)) {
+                                debug("下載回報成功但檔案不完整（" + apkOnDisk.length()
+                                    + " bytes），不進行安裝");
+                            } else {
+                                debug("STATUS_SUCCESSFUL，呼叫 installApk");
+                                runOnUiThread(() -> installApk(filePath));
+                            }
                         } else if (status == DownloadManager.STATUS_FAILED) {
                             debug("下載失敗");
                             running = false;
@@ -390,6 +402,12 @@ public class MainActivity extends BridgeActivity {
             try {
                 File apkFile = new File(filePath);
                 debug("檔案存在:" + apkFile.exists() + " 大小:" + apkFile.length());
+                // 檔案不見或是空的就別再往下走。FileProvider 與 startActivity 都不會
+                // 檢查檔案內容，硬送出去只會讓系統安裝程式報一個看不出原因的錯。
+                if (!isCompleteApk(apkFile)) {
+                    debug("APK 不完整或不存在，中止安裝");
+                    return;
+                }
                 Uri uri = FileProvider.getUriForFile(
                     MainActivity.this,
                     getPackageName() + ".fileprovider",
