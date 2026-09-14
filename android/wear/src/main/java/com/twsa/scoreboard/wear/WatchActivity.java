@@ -155,8 +155,23 @@ public class WatchActivity extends Activity implements MessageClient.OnMessageRe
         }
     };
 
+    /**
+     * 本次進入畫面是否已經自動嘗試過喚起手機端。
+     *
+     * 只試一次。使用者若是刻意把手機端收起來（狀態列點兩下），不該被自動叫回來；
+     * 手機端真的不在時，反覆重試也只是白費電，狀態列的提示還在，手動點就好。
+     */
+    private boolean autoOpenAttempted = false;
+
     private final Runnable ackTimeout = () -> {
-        if (!linked) setStatus(HINT_TAP_TO_OPEN, false);
+        if (linked) return;
+        setStatus(HINT_TAP_TO_OPEN, false);
+        // 開手錶遙控器的當下，意圖就是要用計分板；手機端沒開就順手幫忙開起來，
+        // 不必先低頭去點手機再回來。
+        if (!autoOpenAttempted) {
+            autoOpenAttempted = true;
+            openPhoneApp();
+        }
     };
 
     @Override
@@ -331,6 +346,7 @@ public class WatchActivity extends Activity implements MessageClient.OnMessageRe
         linked = false;
         linkedStatusText = null;
         lastStateAt = 0L;
+        autoOpenAttempted = false;
         setStatus("連線中…", false);
         // 要一份目前比分，順便確認手機端有在聽
         sendCmd("hello", 0);
