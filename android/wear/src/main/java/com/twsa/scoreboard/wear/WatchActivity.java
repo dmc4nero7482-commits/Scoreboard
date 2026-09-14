@@ -29,6 +29,9 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.json.JSONObject;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -54,6 +57,7 @@ import java.util.concurrent.Executors;
  *
  * 未連線時狀態列顯示「手機未開啟 · 點此開啟」，點它就會用 RemoteActivityHelper
  * 遠端把手機端叫起來（見 openPhoneApp()）；已連線時點兩下則是把手機端收起來。
+ * 把手錶 App 滑掉，手機端也會一起收起來（見 onUserLeaveHint/onPause）。
  *
  * 計時刻意不放在手錶上：一場比賽只按一兩次，卻要吃掉錶面寶貴的一整列。留在手機端操作，
  * 手錶只負責最高頻的加減分，外加一顆重置。
@@ -123,6 +127,16 @@ public class WatchActivity extends Activity implements MessageClient.OnMessageRe
     /** 最近一次收到手機狀態的時刻（elapsedRealtime），用來判斷連線是否還活著 */
     private long lastStateAt = 0L;
 
+    /**
+     * 最近一次成功查到的已連線節點。
+     *
+     * 使用者把手錶 App 滑掉時要立刻送出關閉指令，那個時機沒有餘裕再等
+     * getConnectedNodes() 的非同步回呼 —— Activity 正在結束，回呼很可能等不到。
+     * 心跳每 4 秒就會刷新一次這份清單，直接拿來用即可。
+     */
+    private final List<String> cachedNodeIds =
+        Collections.synchronizedList(new ArrayList<String>());
+
     private final Runnable heartbeat = new Runnable() {
         @Override public void run() {
             if (linked && SystemClock.elapsedRealtime() - lastStateAt > LIVENESS_TIMEOUT_MS) {
@@ -162,6 +176,9 @@ public class WatchActivity extends Activity implements MessageClient.OnMessageRe
      * 手機端真的不在時，反覆重試也只是白費電，狀態列的提示還在，手動點就好。
      */
     private boolean autoOpenAttempted = false;
+
+    /** 本次離開前景是否由使用者主動造成（滑動返回、按 HOME），由 onUserLeaveHint 設定 */
+    private boolean userLeaving = false;
 
     private final Runnable ackTimeout = () -> {
         if (linked) return;
@@ -347,6 +364,7 @@ public class WatchActivity extends Activity implements MessageClient.OnMessageRe
         linkedStatusText = null;
         lastStateAt = 0L;
         autoOpenAttempted = false;
+        userLeaving = false;
         setStatus("連線中…", false);
         // 要一份目前比分，順便確認手機端有在聽
         sendCmd("hello", 0);
@@ -357,14 +375,57 @@ public class WatchActivity extends Activity implements MessageClient.OnMessageRe
     }
 
     @Override
+    protected void onUserLeaveHint() {
+        super.onUserLeaveHint();
+        userLeaving = true;
+    }
+
+    @Override
     protected void onPause() {
         super.onPause();
+        // 使用者把手錶 App 滑掉 / 按返回 → 遙控結束了，手機端也一起收起來。
+        //
+        // 判斷條件是「使用者主動離開」，不是單純的 onPause：手錶螢幕熄滅、抬腕放下
+        // 也都會觸發 onPause，但那時使用者只是沒在看錶，拿它當訊號會在比賽中途把
+        // 裁判的計分板關掉。
+        //
+        // 也不能只看 isFinishing()：Wear OS 的滑動返回並不會 finish Activity，
+        // 只是把它移到背景，isFinishing() 永遠是 false（實機驗證過）。
+        // onUserLeaveHint() 才是正確的訊號 —— 它只在使用者主動離開時觸發，
+        // 系統造成的離開（螢幕熄滅、來電蓋過去）不會呼叫它。
+        if (userLeaving || isFinishing()) {
+            android.util.Log.d("WEAR", "手錶端結束，通知手機收起畫面");
+            sendCmdToCachedNodes("closeapp");
+        }
         Wearable.getMessageClient(this).removeListener(this);
         handler.removeCallbacks(ackTimeout);
         handler.removeCallbacks(disarmReset);
         handler.removeCallbacks(disarmClose);
         handler.removeCallbacks(heartbeat);
         closeArmed = false;
+    }
+
+    /**
+     * 直接對快取的節點送指令，略過 getConnectedNodes() 的非同步查詢。
+     * 只在 Activity 正在結束時使用 —— 那個當下等不到回呼。
+     */
+    private void sendCmdToCachedNodes(String cmd) {
+        final byte[] payload = cmd.getBytes(StandardCharsets.UTF_8);
+        final List<String> targets;
+        synchronized (cachedNodeIds) {
+            targets = new ArrayList<>(cachedNodeIds);
+        }
+        if (targets.isEmpty()) {
+            android.util.Log.d("WEAR", "沒有快取節點，" + cmd + " 送不出去");
+            return;
+        }
+        for (String nodeId : targets) {
+            try {
+                Wearable.getMessageClient(this).sendMessage(nodeId, PATH_CMD, payload);
+            } catch (Exception e) {
+                android.util.Log.w("WEAR", "sendCmdToCachedNodes 失敗: " + e.getMessage());
+            }
+        }
     }
 
     @Override
@@ -384,10 +445,15 @@ public class WatchActivity extends Activity implements MessageClient.OnMessageRe
                 android.util.Log.d("WEAR", "sendCmd " + cmd + " -> "
                     + (nodes == null ? 0 : nodes.size()) + " node(s)");
                 if (nodes == null || nodes.isEmpty()) {
+                    cachedNodeIds.clear();
                     linked = false;
                     linkedStatusText = null;
                     if (!closeArmed) setStatus("找不到已配對手機", false);
                     return;
+                }
+                synchronized (cachedNodeIds) {
+                    cachedNodeIds.clear();
+                    for (Node n : nodes) cachedNodeIds.add(n.getId());
                 }
                 for (Node node : nodes) {
                     Wearable.getMessageClient(WatchActivity.this)
