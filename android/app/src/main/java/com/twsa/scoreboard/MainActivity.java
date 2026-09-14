@@ -77,12 +77,10 @@ public class MainActivity extends BridgeActivity {
             // 心跳：只回推一份目前狀態，不要走 onWearCmd。走了的話網頁層會把每次心跳
             // 都記成一次遙控操作，手機上的手錶狀態就會永遠停在「手錶遙控中」。
             if ("ping".equals(cmd)) {
-                runOnUiThread(() ->
-                    getBridge().getWebView().evaluateJavascript("pushWearState()", null));
+                runOnUiThread(() -> callJs("pushWearState", "pushWearState()"));
                 return;
             }
-            runOnUiThread(() ->
-                getBridge().getWebView().evaluateJavascript("onWearCmd('" + cmd + "')", null));
+            runOnUiThread(() -> callJs("onWearCmd", "onWearCmd('" + cmd + "')"));
         };
     }
 
@@ -129,8 +127,7 @@ public class MainActivity extends BridgeActivity {
                 refreshWearNodes();
                 // 主動報到。手錶若比手機先開，它那邊的探詢早就逾時了，沒有這一步
                 // 就得等它下一次心跳才會發現我們上線。
-                getBridge().getWebView().post(() ->
-                    getBridge().getWebView().evaluateJavascript("pushWearState()", null));
+                getBridge().getWebView().post(() -> callJs("pushWearState", "pushWearState()"));
             } catch (Exception e) {
                 android.util.Log.w("WEAR", "addListener 失敗: " + e.getMessage());
             }
@@ -170,6 +167,18 @@ public class MainActivity extends BridgeActivity {
         }
     }
 
+    /**
+     * 呼叫網頁層的函式，但先確認它已經存在。
+     *
+     * 冷啟動時 onResume 會早於 WebView 載入完 scoreboard.html，直接呼叫會在
+     * console 留下一串「xxx is not defined」，而且那次呼叫等於沒發生 ——
+     * 「手機進前景主動向手錶報到」在冷啟動時就是這樣失效的。
+     */
+    private void callJs(String fnName, String call) {
+        getBridge().getWebView().evaluateJavascript(
+            "if (typeof " + fnName + " === 'function') { " + call + " }", null);
+    }
+
     /** 重新抓一次已連線的手錶節點，並把數量回報給計分板畫面。 */
     private void refreshWearNodes() {
         try {
@@ -181,11 +190,9 @@ public class MainActivity extends BridgeActivity {
                         wearNodesFetchedAt = SystemClock.elapsedRealtime();
                     }
                     final int count = nodes.size();
-                    runOnUiThread(() ->
-                        getBridge().getWebView().evaluateJavascript("onWearNodes(" + count + ")", null));
+                    runOnUiThread(() -> callJs("onWearNodes", "onWearNodes(" + count + ")"));
                 })
-                .addOnFailureListener(e -> runOnUiThread(() ->
-                    getBridge().getWebView().evaluateJavascript("onWearNodes(0)", null)));
+                .addOnFailureListener(e -> runOnUiThread(() -> callJs("onWearNodes", "onWearNodes(0)")));
         } catch (Exception e) {
             android.util.Log.w("WEAR", "getConnectedNodes 失敗: " + e.getMessage());
         }

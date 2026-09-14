@@ -2165,6 +2165,10 @@ function initRemoteMode(code) {
         if (timerBtn) timerBtn.innerHTML = data.timerRunning
           ? '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>'
           : '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+        // 手錶顯示的必須是主機那份比分。少了這一行，遙控模式下手錶按了有反應、
+        // 平板也確實加分了，但錶面數字會停住不動。
+        lastHostState = data;
+        pushWearState(data);
       }
     });
   });
@@ -2175,6 +2179,7 @@ function initRemoteMode(code) {
 }
 
 function exitRemoteMode() {
+  lastHostState = null;
   if (netHostConn) { try { netHostConn.close(); } catch(e) {} netHostConn = null; }
   if (netPeer) { netPeer.destroy(); netPeer = null; }
   isRemoteMode = false;
@@ -2222,6 +2227,10 @@ function sendRemoteCmd(cmd) {
 // 網頁版沒有 window.AndroidWear，整段自動停用。
 const WEAR_ACTIVE_MS = 60000;   // 最近一次收到手錶指令算「遙控中」的時間窗
 
+// 遙控模式下主機（例如平板）推來的最新比分。手錶要顯示的是這一份，
+// 不是本機那份沒有意義的影子狀態。
+let lastHostState = null;
+
 const wear = {
   available: false,   // 跑在原生 App 內且有 Google Play 服務
   nodes: 0,           // 已配對且連線中的手錶數（不代表手錶 App 已開啟）
@@ -2247,8 +2256,16 @@ function initWear() {
 // 由原生端呼叫：收到手錶送來的指令
 function onWearCmd(cmd) {
   wear.lastCmdAt = Date.now();
-  if (cmd === 'hello') pushWearState();   // 手錶剛開啟，回一份目前比分
-  else handleNetCmd(cmd);                 // 與網路遙控共用同一套指令處理（內部已會 broadcastState）
+  if (cmd === 'hello') {
+    pushWearState();                      // 手錶剛開啟，回一份目前比分
+  } else if (isRemoteMode) {
+    // 本機自己也是遙控端（例如手機掃了平板的碼），比分的真正持有者是主機。
+    // 這裡若走 handleNetCmd 會改到本機那份影子狀態，主機完全不知情 ——
+    // 手錶上數字會跳、平板卻不動，是最難察覺的那種失敗。
+    sendRemoteCmd(cmd);
+  } else {
+    handleNetCmd(cmd);                    // 與網路遙控共用同一套指令處理（內部已會 broadcastState）
+  }
   renderWearStatus();
 }
 
@@ -2260,7 +2277,8 @@ function onWearNodes(n) {
 
 function pushWearState(payload) {
   if (!wear.available) return;
-  const p = payload || buildStatePayload();
+  // 遙控模式下本機的 state 只是影子，真正的比分在主機那邊
+  const p = payload || (isRemoteMode && lastHostState) || buildStatePayload();
   try {
     AndroidWear.pushState(JSON.stringify({
       scoreA: p.scoreA, scoreB: p.scoreB,
