@@ -33,6 +33,8 @@ public class MainActivity extends BridgeActivity {
     private static final String WEAR_PATH_CMD = "/sb/cmd";
     /** 手機 → 手錶：比分狀態 */
     private static final String WEAR_PATH_STATE = "/sb/state";
+    /** 手機 → 手錶：本端即將離開前景，指令不會再被接收 */
+    private static final String WEAR_PATH_BYE = "/sb/bye";
     /** 已連線手錶清單的快取有效時間 */
     private static final long WEAR_NODES_TTL_MS = 10_000L;
 
@@ -65,6 +67,20 @@ public class MainActivity extends BridgeActivity {
             // 指令來自我們自己的手錶 App，但仍過濾成純字母，避免任何字串被塞進 evaluateJavascript
             final String cmd = raw.replaceAll("[^A-Za-z]", "");
             if (cmd.isEmpty()) return;
+            // 「從手錶收起手機端」是原生層的事，網頁不需要知道。
+            // 用 moveTaskToBack 而不是 finish()：畫面收起來但比分與連線狀態都留著，
+            // 手錶之後用 deep link 叫回來（launchMode=singleTask）就是原本那個畫面。
+            if ("closeapp".equals(cmd)) {
+                runOnUiThread(() -> moveTaskToBack(true));
+                return;
+            }
+            // 心跳：只回推一份目前狀態，不要走 onWearCmd。走了的話網頁層會把每次心跳
+            // 都記成一次遙控操作，手機上的手錶狀態就會永遠停在「手錶遙控中」。
+            if ("ping".equals(cmd)) {
+                runOnUiThread(() ->
+                    getBridge().getWebView().evaluateJavascript("pushWearState()", null));
+                return;
+            }
             runOnUiThread(() ->
                 getBridge().getWebView().evaluateJavascript("onWearCmd('" + cmd + "')", null));
         };
@@ -111,6 +127,10 @@ public class MainActivity extends BridgeActivity {
             try {
                 Wearable.getMessageClient(this).addListener(wearListener);
                 refreshWearNodes();
+                // 主動報到。手錶若比手機先開，它那邊的探詢早就逾時了，沒有這一步
+                // 就得等它下一次心跳才會發現我們上線。
+                getBridge().getWebView().post(() ->
+                    getBridge().getWebView().evaluateJavascript("pushWearState()", null));
             } catch (Exception e) {
                 android.util.Log.w("WEAR", "addListener 失敗: " + e.getMessage());
             }
@@ -121,12 +141,33 @@ public class MainActivity extends BridgeActivity {
     public void onPause() {
         if (wearListener != null) {
             try {
+                // 先道別再解除監聽。手錶那端若不知道我們離開了，會對著一個
+                // 已經沒人在聽的「已連線」畫面繼續加分，要等心跳逾時才發現。
+                sendWearBye();
                 Wearable.getMessageClient(this).removeListener(wearListener);
             } catch (Exception e) {
                 android.util.Log.w("WEAR", "removeListener 失敗: " + e.getMessage());
             }
         }
         super.onPause();
+    }
+
+    /** 告訴手錶「本端要離開前景了」。送不出去也無所謂，手錶的心跳會兜底。 */
+    private void sendWearBye() {
+        final List<String> targets;
+        synchronized (wearNodeIds) {
+            targets = new ArrayList<>(wearNodeIds);
+        }
+        String sender = lastWearSenderId;
+        if (sender != null && !targets.contains(sender)) targets.add(sender);
+        final byte[] payload = new byte[0];
+        for (String nodeId : targets) {
+            try {
+                Wearable.getMessageClient(this).sendMessage(nodeId, WEAR_PATH_BYE, payload);
+            } catch (Exception e) {
+                android.util.Log.w("WEAR", "sendWearBye 失敗: " + e.getMessage());
+            }
+        }
     }
 
     /** 重新抓一次已連線的手錶節點，並把數量回報給計分板畫面。 */
