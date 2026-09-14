@@ -4,6 +4,19 @@ ext {
     sbVersionCode = 5
     sbVersionName = '1.0.5'
 
+    // ── QR 掃描相依套件 ──
+    // @capacitor-mlkit/barcode-scanning 的預設版本（CameraX 1.1.0 / ML Kit 17.2.0）
+    // 太舊，它們附的 .so 只有 4KB 分頁對齊。Android 15 起支援 16KB 分頁，
+    // 三星在 Android 16 上會對這種 App 每次啟動都跳「應用程式相容性」警告
+    // （訊息寫「ELF 對齊檢查失敗，LOAD 區段沒有對齊」）。
+    // 外掛的 build.gradle 是讀 rootProject.ext 的，所以在這裡覆寫即可，
+    // 不必去改 node_modules。
+    androidxCameraCamera2Version = '1.4.2'
+    androidxCameraCoreVersion = '1.4.2'
+    androidxCameraLifecycleVersion = '1.4.2'
+    androidxCameraViewVersion = '1.4.2'
+    mlkitBarcodeScanningVersion = '17.3.0'
+
     minSdkVersion = 22
     compileSdkVersion = 34
     targetSdkVersion = 34
